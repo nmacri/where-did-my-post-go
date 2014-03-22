@@ -1,0 +1,18 @@
+# OSX shite
+.DS_Store
+
+# ipython notebooks
+*.ipynb
+.ipynb_checkpoints/*
+
+# Compiled code
+*.pyc
+
+# Junk csvs
+*.csv
+
+# Pickled Files
+*.pkl
+
+# Secrets
+secrets.json
