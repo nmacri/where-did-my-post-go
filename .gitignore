@@ -16,3 +16,7 @@
 
 # Secrets
 secrets.json
+
+# Images
+*.png
+*.gif
