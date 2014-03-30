@@ -16,8 +16,6 @@ from PIL import Image
 import random
 
 
-
-
 class etl_controller(object):
     """ETL methods for collecting and storing reblog graphs"""
     def __init__(self):
