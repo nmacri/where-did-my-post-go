@@ -1,6 +1,7 @@
 import json
 import os
 import urllib, cStringIO
+from collections import Counter
 
 from PIL import Image as Im
 import mysql.connector
@@ -148,7 +149,6 @@ class gif_generator(object):
         if len(background_colors) == 0:
             background_colors = ['#ffffff']
 
-        from collections import Counter
         most_common_background_color = Counter(background_colors).most_common(1)[0][0]
         most_common_background_color
 
