@@ -89,14 +89,16 @@ class gif_generator(object):
         print "Graph Built. Sequencing edges . . ."
         print "    node count = ", str(self.G.number_of_nodes())
 
-        if self.G.number_of_nodes() < 60:
-            frames = self.G.number_of_nodes()
+        if self.G.number_of_nodes() < 80:
+            frames = int(self.G.number_of_nodes() / 1.7)
         elif self.G.number_of_nodes() < 200:
-            frames = 60
-        elif self.G.number_of_nodes() < 2000:
             frames = 45
-        else:
+        elif self.G.number_of_nodes() < 1000:
+            frames = 36
+        elif self.G.number_of_nodes() < 2000:
             frames = 30
+        else:
+            frames = 24
 
         print "    frame count = ", str(frames)
 
@@ -221,17 +223,46 @@ class gif_generator(object):
         # use graphviz to find layout
         if self.G.number_of_nodes() > 2000:
             layout = "sfdp"
+        elif self.G.number_of_nodes() > 400:
+            r = random.random()
+            if r < .40:
+                layout = "dot"
+            elif r < .70:
+                layout="twopi"
+            else:
+                layout="fdp"
         elif self.G.number_of_nodes() > 150:
-            layout = "dot"
+            r = random.random()
+            if r < .50:
+                layout = "dot"
+            elif r < .75:
+                layout="twopi"
+            elif r < .90:
+                layout = "fdp"
         else:
-            layout="twopi"
+            r = random.random()
+            if r < .60:
+                layout = "twopi"
+            else:
+                layout="fdp"
+
         pos=nx.graphviz_layout(self.G,prog=layout)
+
+        print "Using layout ", layout
+
+        if random.random() > 0.5 and layout != "sfdp" and layout != "fdp":
+            new_layout_for_each_frame = True
+            print "Using new layout for each frame"
+        else:
+            new_layout_for_each_frame = False
+            print "Using one layout for entire GIF"
 
         for i,edge_list in enumerate(self.edge_sequence):
 
             subgraph = nx.DiGraph(edge_list)
             
-            if layout == "twopi":
+            if new_layout_for_each_frame:
+                
                 graph_to_draw = subgraph
                 pos=nx.graphviz_layout(graph_to_draw,prog=layout)
 
@@ -250,19 +281,29 @@ class gif_generator(object):
                         continue
                 c_class = centrality_class.to_dict()
                 node_colors = [c_class[n] for n in graph_to_draw]
-                edge_colors = colorific.norm_color(self.sorted_photo_pallete[6].value)
+                edge_colors = [colorific.norm_color(self.sorted_photo_pallete[6].value) for edge in graph_to_draw.edges(data=False)]
+                self.node_cmap = colors.ListedColormap([colorific.norm_color(self.sorted_photo_pallete[5].value),
+                                      colorific.norm_color(self.sorted_photo_pallete[4].value),
+                                      colorific.norm_color(self.sorted_photo_pallete[3].value),
+                                      colorific.norm_color(self.sorted_photo_pallete[2].value),
+                                      colorific.norm_color(self.sorted_photo_pallete[1].value),
+                                      colorific.norm_color(self.sorted_photo_pallete[0].value)])
             else:
+
                 graph_to_draw = self.G
                 node_colors = [self.centrality_class[n] if n in subgraph.nodes() else 0 for n in graph_to_draw]
                 edge_colors = [1 if edge in subgraph.edges() else 0 for edge in graph_to_draw.edges(data=False)]
             
             import matplotlib.pyplot as plt
 
-            fig = plt.figure(1,figsize= (10,min(max([10,graph_to_draw.number_of_nodes() / 30]),25)) )
+            fig = plt.figure(1,figsize= (10,min(max([10,self.G.number_of_nodes() / 30]),15)))
 
             axes = fig.add_subplot(111)
 
+            # cf = axes.get_figure()
+            # cf.set_facecolor('w')
 
+            # plt.hold(True)
             
             #gvcolor, wc, ccomps, tred, sccmap, fdp, circo, neato, acyclic, nop, gvpr, dot, sfdp.
             # draw nodes, coloring by rtt ping time
@@ -270,14 +311,32 @@ class gif_generator(object):
                     edge_color=edge_colors,
                     node_color=node_colors,
                     cmap=self.node_cmap,
-                    edge_cmap=None if layout=='twopi' else self.edge_cmap,
+                    edge_cmap=None if new_layout_for_each_frame else self.edge_cmap,
                     with_labels=False,
                     alpha=.3 if layout == 'sfdp' else 1,
                     arrows=False,
                     node_shape='.', #'.' if layout == 'sfdp ' else 'o',
                     node_size=50000/graph_to_draw.number_of_nodes(),
                     font_size=24,
-                    linewidth=0)
+                    linewidths=0)
+
+            # node_collection = nx.draw_networkx_nodes(graph_to_draw,pos=pos,ax=axes,
+            #         node_color=node_colors,
+            #         cmap=self.node_cmap,
+            #         alpha=.3 if layout == 'sfdp' else 1,
+            #         node_shape='.', #'.' if layout == 'sfdp ' else 'o',
+            #         node_size=50000/graph_to_draw.number_of_nodes(),
+            #         edgesize=0)
+
+            # edge_collection = nx.draw_networkx_edges(graph_to_draw,pos=pos,ax=axes,
+            #         edge_color=edge_colors,
+            #         edge_cmap=None if new_layout_for_each_frame else self.edge_cmap,
+            #         alpha=.3 if layout == 'sfdp' else 1,
+            #         arrows=False)
+
+            # plt.draw_if_interactive()
+
+
             # adjust the plot limits
             xmax=1.02*max(xx for xx,yy in pos.values())
             ymax=1.02*max(yy for xx,yy in pos.values())
@@ -290,11 +349,14 @@ class gif_generator(object):
                       fontsize=14,
                       color=colorific.norm_color(self.sorted_photo_pallete[6].value))
                         
-            fig.savefig('frame'+str(i)+'.png', dpi=50, facecolor = self.background_color)
+            fig.savefig('frame'+str(i)+'.png', dpi=400/min(max([10,self.G.number_of_nodes() / 30]),15), facecolor = self.background_color)
             plt.clf()
             plt.close()
     
     def write_frames_to_gif(self):    
-        writeGif('animated'+"%x" % random.getrandbits(32)+'.gif',
+        key = "%x" % random.getrandbits(32)
+        writeGif('animated'+key+'.gif',
                  [Image.open('frame'+str(i)+'.png').convert(mode="RGB",palette=Image.ADAPTIVE) for i in range(len(self.edge_sequence))],
                  dither=True)
+        print "saving as animated"+key+".gif"
+        print "\n"
