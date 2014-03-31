@@ -211,7 +211,8 @@ class etl_controller(object):
         
         curs = self.mysql_connection.cursor()
         if len(submissions['posts'])>1:
-            curs.executemany(sql,[{k:v for k,v in submission.iteritems() if k in keys} for submission in submissions['posts']])
+            for submission in submissions['posts']:
+                curs.execute(sql,{k:v for k,v in submission.iteritems() if k in keys})
             print "multi"
         elif len(submissions['posts'])==1:
             curs.execute(sql,{k:v for k,v in submissions['posts'][0].iteritems() if k in keys})
@@ -248,6 +249,16 @@ class etl_controller(object):
                     curs.execute(sql,(blog_name,post_id))
                     curs.close()
 
+                    print "Tumblr post ETL for "+blog_name+" post id "+post_id
+                    print "     extract . . . "
+                    self.tb_extract_controller.pull_tumblr_post_by_id(blog_name,post_id)
+                    print "     transform . . . "
+                    transformed_df = self.transform_tb_posts()
+                    print "     load posts . . . "
+                    self.load_tb_posts(transformed_df)
+                    print "     load notes . . . "
+                    self.transform_and_load_tb_notes()
+                    print "     inspect reblog tree . . . "
                     self.inspect_tb_reblog_tree(blog_name, post_id)
                 else:
                     pass
