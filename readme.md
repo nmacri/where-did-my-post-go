@@ -1,7 +1,7 @@
 Where Did My Post Go?
 ======
 
-Primary Code Base for [http://wheredidyourpostgo.tumblr.com](http://wheredidyourpostgo.tumblr.com) -- A Tumblr bot / blog / service that posts gifs generated from the reblog graphs of user-submitted posts
+Primary Code Base for [http://wheredidmypostgo.tumblr.com](http://wheredidyourpostgo.tumblr.com) -- A Tumblr bot / blog / service that posts gifs generated from the reblog graphs of user-submitted posts
 
 
 ![](http://f.cl.ly/items/3k1y3Q031p293a1T0O0U/animated48e7490f.gif)
