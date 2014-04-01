@@ -36,7 +36,7 @@ class flirt_and_reciprocate_bot(object):
         and blog_name not in ('wheredidmypostgo', %s)
         group by blog_name
         order by avg(ClosenessCentrality) DESC
-        """ % (",".join(self.etl_controller.target_blogs), max_end_date.isoformat() , ",".join(self.etl_controller.target_blogs))
+        """ % ("'"+"','".join(self.etl_controller.target_blogs)+"'", max_end_date.isoformat() , "'"+"','".join(self.etl_controller.target_blogs)+"'")
         
         self.influencer_df = psql.read_frame(sql,self.etl_controller.mysql_connection)
         self.influencer_df['pdf'] = self.influencer_df.ClosenessCentrality / self.influencer_df.ClosenessCentrality.sum()
