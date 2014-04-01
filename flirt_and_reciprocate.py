@@ -32,7 +32,7 @@ class flirt_and_reciprocate_bot(object):
         select blog_name, avg(ClosenessCentrality) as 'ClosenessCentrality'
         from tb_reblog_graphs
         where reblogged_root_name in (%s)
-        and end_date > '%s'
+        and end_date > %s
         and blog_name not in ('wheredidmypostgo', %s)
         group by blog_name
         order by avg(ClosenessCentrality) DESC
