@@ -31,15 +31,14 @@ class flirt_and_reciprocate_bot(object):
         sql = """
         select blog_name, avg(ClosenessCentrality) as 'ClosenessCentrality'
         from tb_reblog_graphs
-        where reblogged_root_name in ('prostheticknowledge','algopop')
+        where reblogged_root_name in (%s)
         and end_date > '%s'
-        and blog_name not in ('wheredidmypostgo','prostheticknowledge','algopop')
+        and blog_name not in ('wheredidmypostgo', %s)
         group by blog_name
         order by avg(ClosenessCentrality) DESC
-        """ % max_end_date
+        """ % (",".join(self.etl_controller.target_blogs), max_end_date ,",".join(self.etl_controller.target_blogs))
         
         self.influencer_df = psql.read_frame(sql,self.etl_controller.mysql_connection)
-        self.influencer_df.sort(column='ClosenessCentrality',ascending=False,inplace=True)
         self.influencer_df['pdf'] = self.influencer_df.ClosenessCentrality / self.influencer_df.ClosenessCentrality.sum()
         self.influencer_df['cdf'] = self.influencer_df.sort(column='pdf',ascending=False).pdf.cumsum()
         
