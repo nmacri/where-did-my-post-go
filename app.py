@@ -375,6 +375,8 @@ class etl_controller(object):
             self.load_tb_posts(transformed_df)
             print "     load notes . . . "
             self.transform_and_load_tb_notes()
+            print "     inspecting reblog tree . . . "
+            self.inspect_tb_reblog_tree(post['blog_name'], post['post_id'])
 
 
     def transform_tb_posts(self):
