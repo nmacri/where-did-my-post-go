@@ -360,6 +360,23 @@ class etl_controller(object):
             print "     load notes . . . "
             self.transform_and_load_tb_notes()
 
+    def etl_target_posts(self):
+        
+        post_targets = self.target_posts
+        pd.np.random.shuffle(post_targets)
+        
+        for post in post_targets:
+            print "Tumblr posts ETL for "+post['blog_name']+" post id "+post['post_id']
+            print "     extract . . . "
+            self.tb_extract_controller.pull_tumblr_post_by_id(post['blog_name'],post['post_id'])
+            print "     transform . . . "
+            transformed_df = self.transform_tb_posts()
+            print "     load posts . . . "
+            self.load_tb_posts(transformed_df)
+            print "     load notes . . . "
+            self.transform_and_load_tb_notes()
+
+
     def transform_tb_posts(self):
         df = self.tb_extract_controller.posts_df.copy()
         df['date'] = df.date.apply(parse)
