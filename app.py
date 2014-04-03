@@ -656,7 +656,7 @@ class etl_controller(object):
 
         iterations = 0
 
-        while len(new_reblogs) > 0 and iterations < 50: 
+        while len(new_reblogs) > 0 and iterations < 500: 
             # select all known reblogs that are in the reblogged_from fields of tb_posts
             # but not yet in tb_posts
 
