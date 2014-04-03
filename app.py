@@ -236,7 +236,7 @@ class etl_controller(object):
         for s in pending_submissions:
             ## Test whether this is a valid submission
             if s['type'] == 'link':
-                if '.tumblr.com/' in s['url']:
+                if '.tumblr.com/post/' in s['url']:
                     blog_name = s['url'].split('/')[2].split('.')[0]
                     post_id = s['url'].split('/')[4]
                     sql = """
