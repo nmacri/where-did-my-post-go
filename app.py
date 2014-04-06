@@ -1310,7 +1310,7 @@ class gif_generator(object):
         import os
 
         # Only store a maximum of 256 GIFs on production server 
-        if os.getenv('HOME') == '/home/ubuntu/':
+        if os.getenv('HOME') == '/home/ubuntu':
             key = "%x" % random.getrandbits(8)
         else:
             key = "%x" % random.getrandbits(32)
@@ -1564,7 +1564,8 @@ class post_generator(object):
         curs = self.mysql_connection.cursor()
         curs.execute(sql)
         for submission_id,post_url in curs.fetchall():
+            self.edit_submission(submission_id,post_url)
             try:
-                self.edit_submission(submission_id,post_url)
+                
             except:
                 pass
