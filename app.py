@@ -1495,10 +1495,11 @@ class post_generator(object):
         from tb_posts
         where blog_name in (%s,%s,%s,%s,%s)
             and reblogged_root_url = %s
-        """ % (top_five_influencers + [post_url])
+        """
         
         influencer_df = psql.read_frame(sql,self.mysql_connection,
-                                        index_col="Blog Name")
+                                        index_col="Blog Name",
+                                        params = top_five_influencers + [post_url])
         influencer_df['Betweenness Centrality'] = 0
         for i in influencer_df.index:
             influencer_df['Betweenness Centrality'].ix[i] = cent[i]
