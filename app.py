@@ -1564,8 +1564,7 @@ class post_generator(object):
         curs = self.mysql_connection.cursor()
         curs.execute(sql)
         for submission_id,post_url in curs.fetchall():
-            self.edit_submission(submission_id,post_url)
             try:
-                
+                self.edit_submission(submission_id,post_url)
             except:
                 pass
