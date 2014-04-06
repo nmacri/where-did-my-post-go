@@ -1495,7 +1495,7 @@ class post_generator(object):
         from tb_posts
         where blog_name in (%s,%s,%s,%s,%s)
             and reblogged_root_url = %s
-        """ % top_five_influencers + [post_url]
+        """ % top_five_influencers.append(post_url)
         
         influencer_df = psql.read_frame(sql,self.mysql_connection,
                                         index_col="Blog Name")
