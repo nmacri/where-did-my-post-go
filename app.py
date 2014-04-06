@@ -14,6 +14,7 @@ import colorific
 from matplotlib import colors
 from dateutil.parser import parse
 import hashlib
+from pymarkovchain import MarkovChain
 
 from images2gif import writeGif
 from PIL import Image
@@ -991,7 +992,7 @@ class gif_generator(object):
         # Build an Authorized Database Connection
         self.mysql_connection = mysql.connector.connect(**secrets['mysql'])
 
-    def extract_reblog_graph(self, post_url):
+    def extract_reblog_graph(self, post_url, frame_rate_multiplier=1):
 
         print "Building graph . . ."
         G = nx.DiGraph()
@@ -1024,8 +1025,14 @@ class gif_generator(object):
             G.edge[edge[0]][edge[1]]['date'] = edge[2]
         curs.close()
 
-        connected=nx.connected_component_subgraphs(G.to_undirected())[0]
-        self.G = G.subgraph(connected.nodes())
+        connected=nx.connected_component_subgraphs(G.to_undirected())[0:3]
+
+        self.G = G.subgraph(connected[0].nodes())
+
+        for cc in connected[1:3]:
+            self.G = nx.compose(self.G,G.subgraph(cc.nodes()))
+
+        
 
         for edge in self.G.edges_iter(data=True):
             edge[2]['timestamp'] = int(edge[2]['date'].strftime('%s'))
@@ -1034,17 +1041,17 @@ class gif_generator(object):
         print "    node count = ", str(self.G.number_of_nodes())
 
         if self.G.number_of_nodes() < 80:
-            frames = int(self.G.number_of_nodes() / 1.7)
-        elif self.G.number_of_nodes() < 200:
-            frames = 45
-        elif self.G.number_of_nodes() < 1000:
-            frames = 36
-        elif self.G.number_of_nodes() < 2000:
-            frames = 30
+            frames = int(self.G.number_of_nodes() / 1.8 * frame_rate_multiplier)
+        elif self.G.number_of_nodes() < 150:
+            frames = int(45 * frame_rate_multiplier)
+        elif self.G.number_of_nodes() < 900:
+            frames = int(36 * frame_rate_multiplier)
+        elif self.G.number_of_nodes() < 1800:
+            frames = int(30 * frame_rate_multiplier)
         else:
-            frames = 24
+            frames = int(24 * frame_rate_multiplier)
 
-        print "    frame count = ", str(frames)
+        print "    frame count = ", str(frames), "frame rate multiplier = ", frame_rate_multiplier
 
             
         timestamps = [int(data['date'].strftime('%s')) for fr,to,data in self.G.edges_iter(data=True)]
@@ -1168,20 +1175,23 @@ class gif_generator(object):
             layout = "sfdp"
         elif self.G.number_of_nodes() > 400:
             r = random.random()
-            if r < .40:
+            if r < .7:
                 layout = "dot"
-            elif r < .70:
+            elif r < .8:
                 layout="twopi"
-            else:
+            elif r < .9:
                 layout="fdp"
+            else:
+                layout='circo'
         elif self.G.number_of_nodes() > 150:
             r = random.random()
             if r < .50:
                 layout = "dot"
             elif r < .75:
                 layout="twopi"
-            elif r < .90:
+            else:
                 layout = "fdp"
+
         else:
             r = random.random()
             if r < .60:
@@ -1259,7 +1269,7 @@ class gif_generator(object):
                     alpha=.3 if layout == 'sfdp' else 1,
                     arrows=False,
                     node_shape='.', #'.' if layout == 'sfdp ' else 'o',
-                    node_size=50000/graph_to_draw.number_of_nodes(),
+                    node_size= 70000 /graph_to_draw.number_of_nodes(),
                     font_size=24,
                     linewidths=0)
 
@@ -1296,11 +1306,265 @@ class gif_generator(object):
             plt.clf()
             plt.close()
     
-    def write_frames_to_gif(self):    
-        key = "%x" % random.getrandbits(32)
+    def write_frames_to_gif(self):
+        import os
+
+        # Only store a maximum of 256 GIFs on production server 
+        if os.getenv('HOME') == '/home/ubuntu/':
+            key = "%x" % random.getrandbits(8)
+        else:
+            key = "%x" % random.getrandbits(32)
         writeGif('images/animated'+key+'.gif',
                  [Image.open('images/frame'+str(i)+'.png').convert(mode="RGB",palette=Image.ADAPTIVE) for i in range(len(self.edge_sequence))],
                  dither=True)
         self.prev_filename = 'animated'+key+'.gif'
         print "saving as animated"+key+".gif"
         print "\n"
+
+class post_generator(object):
+    """"""
+    def __init__(self):
+
+        # Auth credentials are stored in secrets.json
+        secrets_file = open('secrets.json','rb')
+        secrets = json.load(secrets_file)
+        secrets_file.close()
+
+        # Build an Authorized Tumblr Client
+        self.tumblr_client = pytumblr.TumblrRestClient(**secrets['tumblr_tokens'])
+
+        # Build an Authorized Database Connection
+        self.mysql_connection = mysql.connector.connect(**secrets['mysql'])
+        
+        self.gif_generator = gif_generator()
+        
+        url = 'http://cl.ly/text/3V32120p461l/A-Thousand-Plateaus.txt'
+        text = urllib.urlopen(url).read()
+        
+        url = 'http://f.cl.ly/items/3q3r2m0K1G3a2X1A2V1t/anti-oedipus-fixed.txt'
+        text = text + urllib.urlopen(url).read()
+        
+        # Create an instance of the markov chain. By default, it uses MarkovChain.py's location to
+        # store and load its database files to. You probably want to give it another location, like so:
+        self.mc = MarkovChain("./markov")
+        # To generate the markov chain's language model, in case it's not present
+        self.mc.generateDatabase(text)
+        
+    def generate_random_title(self):
+
+        def title_case(s):
+           exceptions = ['a', 'an', 'the', 'at', 'by', 'for', 'in', 'of', 'on', 'to', 'up', 'and', 'as', 'but', 'it', 'or', 'nor']
+           word_list = re.split(' ', s)       #re.split behaves as expected
+           final = [word_list[0].capitalize()]
+           for word in word_list[1:]:
+              final.append(word in exceptions and word or word.capitalize())
+           return " ".join(final)
+        
+        
+        def sentiment(text):
+            try:
+                tb = TextBlob(text)
+                return tb.sentiment
+            except:
+                return None
+        
+        def score(text):
+            s = sentiment(text)
+            if s == None:
+                return 0
+            else:
+                return s.subjectivity * s.polarity
+        
+        raw_candidates = [self.mc.generateString() for i in range(500)]
+        caption_candidates = [c for c in raw_candidates if len(c.split(' ')) < 9 and len(c.split(' ')) > 3]
+        
+        data = [(c, score(c)) for c in caption_candidates]
+        sorted_data = sorted(data, key=lambda tup: tup[1], reverse=True)[0:3]
+        caption = [s[0] for s in sorted_data][-1]
+        
+        return title_case(' '.join(word.strip(string.punctuation) for word in caption.split()))
+
+    def edit_submission(self,submission_id,post_url):
+        """
+        Supply user-submitted links with a GIF and a caption
+        """
+        blog_name = post_url.split('/')[2].split('.')[0]
+        post_id = post_url.split('/')[4]
+        
+        self.gif_generator.extract_reblog_graph(post_url)
+        
+        while True:
+            try:
+                self.gif_generator.pick_colors()
+                break
+            except:
+                curs = self.mysql_connection.cursor()
+                sql = "select name from tb_blogs order by rand() limit 1"
+                curs.execute(sql)
+                self.gif_generator.blog_name = curs.fetchall()[0][0]
+                curs.close()
+                self.gif_generator.pick_colors()
+                break
+                
+        self.gif_generator.draw_graph_frames()
+        self.gif_generator.write_frames_to_gif()
+        
+        # Make Sure GIF is < 1MB
+        gif_stats = os.stat('images/'+self.gif_generator.prev_filename)
+    
+        attempts = 0
+        
+        while gif_stats.st_size > 1048576 and attempts < 8:
+            print "GIF too large, trying again . . ."
+            attempts += 1
+            while True:
+                self.gif_generator.extract_reblog_graph(post_url, frame_rate_multiplier = 1 - float(attempts)/16)
+                try:
+                    self.gif_generator.pick_colors()
+                    break
+                except:
+                    curs = self.mysql_connection.cursor()
+                    sql = "select name from tb_blogs order by rand() limit 1"
+                    curs.execute(sql)
+                    self.gif_generator.blog_name = curs.fetchall()[0][0]
+                    curs.close()
+                    self.gif_generator.pick_colors()
+                    break
+            self.gif_generator.draw_graph_frames()
+            self.gif_generator.write_frames_to_gif()
+
+            gif_stats = os.stat('images/'+self.gif_generator.prev_filename)
+            
+            if attempts > 8:
+                raise BaseException("more than 8 attempts")
+        
+        print "GIF is ready and under 1MB"
+        
+        sql = "select blog_name, short_url, note_count from tb_posts where post_url = %s"
+        curs = self.mysql_connection.cursor()
+        curs.execute(sql,(post_url,))
+        blog_name, short_url, note_count = curs.fetchall()[0]
+        curs.close()
+        
+        n_nodes = self.gif_generator.G.number_of_nodes()
+        
+        # Retrieve Submission from API
+        response = self.tumblr_client.posts('wheredidmypostgo', id = submission_id)
+
+        if 'meta' in response.keys():
+
+            print "No Such Submission.  Assuming response generated and updating wdmpg_submissions."
+
+            sql = '''
+            UPDATE wdmpg_submissions 
+            SET response_generated = 1 
+            WHERE id = %s
+            '''
+            curs = self.mysql_connection.cursor()
+            curs.execute(sql,(submission_id,))
+            curs.close()
+        else:
+            submission_post = response['posts'][0]
+         
+        if submission_post['title'] != 'Submitted Post':
+            try:
+                header_html = '<br><h3>' + submission_post['title'] + '</h3>'
+            except:
+                header_html = '<br>'
+            header_html = header_html +' ' + submission_post['description'] + '<br>'
+        else:
+            header_html = '<br>'+submission_post['description'].split('<h4>Reblog network of an <a href="')[0]
+            
+            
+        header_html = header_html+'<h4>Reblog network of an <a href="'+short_url+'">original tumblr post</a> by <a href="'+ post_url.split('/post')[0]+'">'+blog_name+'</a></h4>'
+        caption_html = '<br><p><p></p>This image is based on '+str(n_nodes)+' reblogs ('+ str(round(float(n_nodes)/note_count*100,5))+'% of the total number of notes on the post).  '
+        if float(n_nodes)/note_count < .1:
+            caption_html = caption_html + 'The bot that runs <a href="http://wheredidmypostgo.tumblr.com">Where Did my Post Go?</a> samples reblog graphs from currently active "leaves" back to the original "root" blog; so keep in mind that while this may not be the complete network, it is currently the most active "branch".</p>'
+        else:
+            pass
+        caption_html = caption_html + '<br><h4>The most influential nodes in this reblog graph are </h4>'
+        
+        import networkx as nx
+        import pandas.io.sql as psql
+        
+        cent = nx.closeness_centrality(self.gif_generator.G,normalized=True)
+        top_five_influencers = sorted(cent.iterkeys(), key=lambda x: cent[x], reverse=True)[0:5]
+        
+        sql = """
+        select short_url as "Post", blog_name as "Blog Name"
+        from tb_posts
+        where blog_name in (%s,%s,%s,%s,%s)
+            and reblogged_root_url = %s
+        """ 
+        
+        influencer_df = psql.read_frame(sql,self.mysql_connection,
+                                        index_col="Blog Name",
+                                        params=top_five_influencers + [post_url])
+        influencer_df['Betweenness Centrality'] = 0
+        for i in influencer_df.index:
+            influencer_df['Betweenness Centrality'].ix[i] = cent[i]
+        
+        
+        def formatter(influencer_post,betweenness_centrality):
+            return ' (<a href="'+influencer_post+'">reblog</a>, '+str(round(betweenness_centrality,3))+' <a href="http://en.wikipedia.org/wiki/Betweenness_centrality">Betweenness Centrality</a>)'
+        
+        influencer_html = '<ul>'
+        for influencer_blog,(influencer_post,betweenness_centrality) in influencer_df.sort(columns=['Betweenness Centrality'],ascending=False).iterrows():
+            influencer_html = influencer_html+'<li>'
+            influencer_html = influencer_html + influencer_blog + formatter(influencer_post,betweenness_centrality)
+            influencer_html = influencer_html+'</li>'
+        influencer_html = influencer_html+'</ul>' 
+        
+        response = self.tumblr_client.create_photo('wheredidmypostgo',
+                                        data='images/'+self.gif_generator.prev_filename,
+                                        state='draft')
+        draft_id = response['id']
+        
+        draft_post = self.tumblr_client.posts('wheredidmypostgo',id=draft_id)['posts'][0]
+        
+        print "created draft post to host image ", draft_post['post_url']
+
+        photo_html = '<img src="'+draft_post['photos'][0]['original_size']['url']+'" alt="Reblog network of an original tumblr post by '+blog_name+'">'
+        
+        description_html = header_html+photo_html+caption_html+influencer_html
+        
+        blogname = 'wheredidmypostgo'
+        
+        tags = ['gif','data','network','graph','tumblr','data visualization','trees','animation','animated','color']
+        pd.np.random.shuffle(tags)
+        
+        tags = ['wheredidmypostgo'] + tags
+        
+        kwargs = {'tags': tags,
+                  'id': submission_id,
+                  'state': 'submission',
+                  'description': description_html.encode('ascii','ignore'),
+                  'format': 'html',
+                  'title': 'Submitted Post'}
+        
+        url = "/v2/blog/%s/post/edit" % blogname
+        
+        if 'tags' in kwargs and kwargs['tags']:
+            # Take a list of tags and make them acceptable for upload
+            kwargs['tags'] = ",".join(kwargs['tags'])
+        
+        valid_options = ['id'] + ['type', 'state', 'tags', 'tweet', 'date', 'format', 'slug'] + ['title', 'url', 'description']
+        
+        self.tumblr_client.send_api_request('post', url, kwargs, valid_options) 
+
+        print "edited submission http://www.tumblr.com/edit/"+str(submission_id)
+
+    def edit_all_submissions(self):
+        sql = """
+        select id, url
+        from wdmpg_submissions
+        where response_generated = 0
+        order by date ASC
+        """
+        curs = self.mysql_connection.cursor()
+        curs.execute(sql)
+        for submission_id,post_url in curs.fetchall():
+            try:
+                self.edit_submission(submission_id,post_url)
+            except:
+                pass
