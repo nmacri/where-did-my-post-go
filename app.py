@@ -1474,32 +1474,33 @@ class post_generator(object):
 
         if 'meta' in response.keys():
 
-            print response
+            if response['meta']['status'] == '404':
+                print "No such submission.  Assuming response generated and updating wdmpg_submissions and wdmpg_targets."
+                print "    submission_id = ", submission_id
+                print "    post_url = ", post_url
 
-            print "No such submission.  Assuming response generated and updating wdmpg_submissions and wdmpg_targets."
-            print "    submission_id = ", submission_id
-            print "    post_url = ", post_url
-
-            sql = '''
-            UPDATE wdmpg_submissions 
-            SET response_generated = 1 
-            WHERE id = %s
-            ''' % submission_id
-            curs = self.mysql_connection.cursor()
-            curs.execute(sql)
-            curs.close()
-
-
-            if '.tumblr.com/post/' in post_url:
                 sql = """
-                DELETE FROM wdmpg_targets 
-                WHERE TYPE = 'POST'
-                AND value = %s
-                """ % s['url'].split('/')[4]
+                UPDATE wdmpg_submissions 
+                SET response_generated = 1 
+                WHERE id = %s
+                """ % submission_id
                 curs = self.mysql_connection.cursor()
                 curs.execute(sql)
                 curs.close()
-            return
+
+                if '.tumblr.com/post/' in post_url:
+                    sql = """
+                    DELETE FROM wdmpg_targets 
+                    WHERE TYPE = 'POST'
+                    AND value = %s
+                    """ % s['url'].split('/')[4]
+                    curs = self.mysql_connection.cursor()
+                    curs.execute(sql)
+                    curs.close()
+                return
+            else:
+                print "Tumblr API returned: ", response
+                return
         else:
             submission_post = response['posts'][0]
         
@@ -1660,5 +1661,6 @@ class post_generator(object):
         for submission_id,post_url in curs.fetchall():
             try:
                 self.edit_submission(submission_id,post_url)
-            except:
+            except Exception, e:
+                print(e)
                 pass
