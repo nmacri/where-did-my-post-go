@@ -473,14 +473,17 @@ class etl_controller(object):
             blog_info['updated'] = None
         columns = ','.join(list(set(cols) & set(blog_info.keys())))
         placeholders = "%("+')s,%('.join(list(set(cols) & set(blog_info.keys()))) + ")s"
+        updates = ",".join([k+"=%("+k+")s" for k in list(set(cols) & set(blog_info.keys()))])
 
         curs = self.mysql_connection.cursor(buffered=True)
         try:
-            sql = "INSERT into tb_blogs (%s) VALUES (%s)" % (columns, placeholders)
+            sql = """
+            INSERT into tb_blogs (%s) VALUES (%s)
+            ON DUPLICATE KEY UPDATE %s
+            """ % (columns, placeholders)
             curs.execute(sql,blog_info)
         except:
-            sql = 'UPDATE tb_blogs SET ' + ",".join([k+"=%("+k+")s" for k in list(set(cols) & set(blog_info.keys()))]) + " WHERE name ='" + str(blog_info['name'])+"'"
-            curs.execute(sql,blog_info)
+            pass
         curs.close()
 
     def inspect_tb_blog_info(self,blog_name):
@@ -491,14 +494,16 @@ class etl_controller(object):
         blog_info['updated'] = datetime.fromtimestamp(blog_info['updated'])
         columns = ','.join(list(set(cols) & set(blog_info.keys())))
         placeholders = "%("+')s,%('.join(list(set(cols) & set(blog_info.keys()))) + ")s"
+        updates =  ",".join([k+"=%("+k+")s" for k in list(set(cols) & set(blog_info.keys()))])
 
         curs = self.mysql_connection.cursor(buffered=True)
-        try:
-            sql = "INSERT into tb_blogs (%s) VALUES (%s)" % (columns, placeholders)
-            curs.execute(sql,blog_info)
-        except:
-            sql = 'UPDATE tb_blogs SET ' + ",".join([k+"=%("+k+")s" for k in list(set(cols) & set(blog_info.keys()))]) + " WHERE name ='" + str(blog_info['name'])+"'"
-            curs.execute(sql,blog_info)
+
+        sql = """
+        INSERT into tb_blogs (%s) VALUES (%s)
+        ON DUPLICATE KEY UPDDATE %s
+        """ % (columns, placeholders,updates)
+        curs.execute(sql,blog_info)
+
         curs.close()
 
     def tb_reblog_tree_etl_active_posts(self):
