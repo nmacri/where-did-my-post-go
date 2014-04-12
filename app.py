@@ -1021,8 +1021,9 @@ class gif_generator(object):
             self.post_id = node[2]
         curs.close()
 
-        print "Inspecting graph one last time . . ."
+        print "Re-pulling post from API"
         self.etl_controller.tb_extract_controller.pull_tumblr_post_by_id(self.blog_name, self.post_id)
+        print "Inspecting graph one last time . . ."
         self.etl_controller.inspect_tb_reblog_tree(self.blog_name, self.post_id)
 
         sql = """
