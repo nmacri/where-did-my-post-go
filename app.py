@@ -592,7 +592,16 @@ class etl_controller(object):
         blogs_and_posts = [i for i in curs.fetchall()]
         curs.close()
         for blog_name,post_id in blogs_and_posts:
-            print "Inspecting "+blog_name+" post "+str(post_id)+". . . "
+            print "Inspecting "+blog_name+" post id "+post_id
+            print "     extract . . . "
+            self.tb_extract_controller.pull_tumblr_post_by_id(blog_name,post_id)
+            print "     transform . . . "
+            transformed_df = self.transform_tb_posts()
+            print "     load posts . . . "
+            self.load_tb_posts(transformed_df)
+            print "     load notes . . . "
+            self.transform_and_load_tb_notes()
+            print "     inspect reblog tree . . . "
             self.inspect_tb_reblog_tree(blog_name, post_id)
 
 
@@ -629,7 +638,16 @@ class etl_controller(object):
         from operator import itemgetter
 
         for blog_name,post_id,notes_per_day in sorted([(p['blog_name'],p['id'],p['notes_per_day'] * abs(p['days_since_crawl'])) for p in posts],key=itemgetter(2), reverse=True)[0:500]:
-            print "Inspecting "+blog_name+" post "+str(post_id)+". . . "
+            print "Inspecting "+blog_name+" post id "+post_id
+            print "     extract . . . "
+            self.tb_extract_controller.pull_tumblr_post_by_id(blog_name,post_id)
+            print "     transform . . . "
+            transformed_df = self.transform_tb_posts()
+            print "     load post . . . "
+            self.load_tb_posts(transformed_df)
+            print "     load notes . . . "
+            self.transform_and_load_tb_notes()
+            print "     inspect reblog tree . . . "
             self.inspect_tb_reblog_tree(blog_name, post_id)
 
     
@@ -1035,9 +1053,7 @@ class gif_generator(object):
         self.etl_controller = etl_controller()
 
     def extract_reblog_graph(self, post_url, frame_rate_multiplier=1):
-
-
-        print "Building graph . . ."
+        
         G = nx.DiGraph()
 
         sql = """
@@ -1055,10 +1071,19 @@ class gif_generator(object):
             self.post_id = node[2]
         curs.close()
 
-        print "Re-pulling post from API"
-        self.etl_controller.tb_extract_controller.pull_tumblr_post_by_id(self.blog_name, self.post_id)
-        print "Inspecting graph one last time . . ."
+        print "Tumblr post ETL for "+self.blog_name+" post id "+self.post_id
+        print "     extract . . . "
+        self.etl_controller.tb_extract_controller.pull_tumblr_post_by_id(self.blog_name,self.post_id)
+        print "     transform . . . "
+        transformed_df = self.etl_controller.transform_tb_posts()
+        print "     load posts . . . "
+        self.etl_controller.load_tb_posts(transformed_df)
+        print "     load notes . . . "
+        self.etl_controller.transform_and_load_tb_notes()
+        print "     inspect reblog tree . . . "
         self.etl_controller.inspect_tb_reblog_tree(self.blog_name, self.post_id)
+
+        print "Building graph . . ."
 
         sql = """
         select reblogged_from_name, blog_name, date
