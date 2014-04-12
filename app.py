@@ -1425,6 +1425,7 @@ class post_generator(object):
             curs = self.mysql_connection.cursor()
             curs.execute(sql,(submission_id,))
             curs.close()
+            return
         else:
             submission_post = response['posts'][0]
         
