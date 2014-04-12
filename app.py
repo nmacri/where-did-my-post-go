@@ -282,7 +282,7 @@ class etl_controller(object):
                         curs.execute(sql,(blog_name,post_id))
                         curs.close()
 
-                        print "Tumblr post ETL for "+blog_name+" post id "+post_id
+                        print "Tumblr post ETL for "+blog_name+" post id "+str(post_id)
                         print "     extract . . . "
                         self.tb_extract_controller.pull_tumblr_post_by_id(blog_name,post_id)
                         print "     transform . . . "
@@ -1071,7 +1071,7 @@ class gif_generator(object):
             self.post_id = node[2]
         curs.close()
 
-        print "Tumblr post ETL for "+self.blog_name+" post id "+self.post_id
+        print "Tumblr post ETL for "+self.blog_name+" post id "+str(self.post_id)
         print "     extract . . . "
         self.etl_controller.tb_extract_controller.pull_tumblr_post_by_id(self.blog_name,self.post_id)
         print "     transform . . . "
