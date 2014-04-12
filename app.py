@@ -194,6 +194,8 @@ class etl_controller(object):
         curs.execute(sql)
         self.target_tags = [t[0] for t in curs.fetchall()]
 
+        curs.close()
+
     def check_submissions(self):
 
         submissions = self.tumblr_client.submission(self.blog_name)
@@ -201,7 +203,7 @@ class etl_controller(object):
         keys = ['id','date','type','url','title','description','blog_name','liked','followed','post_url','reblog_key']
         columns = ",".join(keys)
         values = "%(" +")s,%(".join(keys) + ")s"
-        updates = ",".join([key+"=%("+key+")s" for key in keys])
+        updates = "id=id"
         
         
         sql = """
@@ -235,6 +237,28 @@ class etl_controller(object):
         curs.close()
 
         for s in pending_submissions:
+            ## Test whether this submission is still pending
+            # Retrieve Submission from API
+            response = self.tumblr_client.posts('wheredidmypostgo', id = s['id'])
+
+            if 'meta' in response.keys():
+
+                print "No such submission.  Assuming response generated and updating wdmpg_submissions."
+                print "    submission_id = ", s['id']
+                print "    post_url = ", post_url
+
+                sql = '''
+                UPDATE wdmpg_submissions 
+                SET response_generated = 1 
+                WHERE id = %s
+                ''' % s['id']
+                curs = self.mysql_connection.cursor()
+                curs.execute(sql)
+                curs.close()
+                return
+            else:
+                pass
+
             ## Test whether this is a valid submission
             if s['type'] == 'link':
                 if '.tumblr.com/post/' in s['url']:
@@ -310,6 +334,7 @@ class etl_controller(object):
                 current_posts = int(curs.fetchall()[0][0])
             except:
                 current_posts = 0
+            curs.close()
 
 
             # This convoluted logic is here to so that for blogs like americanapparel
@@ -662,7 +687,7 @@ class etl_controller(object):
 
         iterations = 0
 
-        while len(new_reblogs) > 0 and iterations < 500: 
+        while len(new_reblogs) > 0 and iterations < 100: 
             # select all known reblogs that are in the reblogged_from fields of tb_posts
             # but not yet in tb_posts
 
@@ -875,6 +900,7 @@ class etl_controller(object):
             else:
                 flow_graph.add_edge(reblogged_from_name,blog_name,weight=1)
         
+        curs.close()
         return flow_graph
 
     def calculate_tumblr_reblog_graph_metrics(self,flow_graph):
@@ -1423,9 +1449,9 @@ class post_generator(object):
             UPDATE wdmpg_submissions 
             SET response_generated = 1 
             WHERE id = %s
-            '''
+            ''' % submission_id
             curs = self.mysql_connection.cursor()
-            curs.execute(sql,(submission_id,))
+            curs.execute(sql)
             curs.close()
             return
         else:
