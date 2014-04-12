@@ -255,7 +255,6 @@ class etl_controller(object):
                 curs = self.mysql_connection.cursor()
                 curs.execute(sql)
                 curs.close()
-                return
             else:
                 pass
 
