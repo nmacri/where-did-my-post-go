@@ -1002,6 +1002,10 @@ class gif_generator(object):
 
     def extract_reblog_graph(self, post_url, frame_rate_multiplier=1):
 
+
+        print "Building graph . . ."
+        G = nx.DiGraph()
+
         sql = """
         select blog_name, date, id
         from tb_posts
@@ -1020,8 +1024,7 @@ class gif_generator(object):
         print "Inspecting graph one last time . . ."
         self.etl_controller.inspect_tb_reblog_tree(self.blog_name, self.post_id)
 
-        print "Building graph . . ."
-        G = nx.DiGraph()
+        
 
         sql = """
         select reblogged_from_name, blog_name, date
