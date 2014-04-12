@@ -997,13 +997,13 @@ class gif_generator(object):
         # Build an Authorized Database Connection
         self.mysql_connection = mysql.connector.connect(**secrets['mysql'])
 
+        # Attach an ETL controller
+        self.etl_controller = etl_controller()
+
     def extract_reblog_graph(self, post_url, frame_rate_multiplier=1):
 
-        print "Building graph . . ."
-        G = nx.DiGraph()
-
         sql = """
-        select blog_name, date
+        select blog_name, date, id
         from tb_posts
         where post_url = %s
         order by date ASC
@@ -1014,7 +1014,14 @@ class gif_generator(object):
             G.add_node(node[0])
             self.blog_name = node[0]
             self.post_date = node[1]
+            self.post_id = node[2]
         curs.close()
+
+        print "Inspecting graph one last time . . ."
+        self.etl_controller.inspect_tb_reblog_tree(self.blog_name, self.post_id)
+
+        print "Building graph . . ."
+        G = nx.DiGraph()
 
         sql = """
         select reblogged_from_name, blog_name, date
@@ -1030,11 +1037,15 @@ class gif_generator(object):
             G.edge[edge[0]][edge[1]]['date'] = edge[2]
         curs.close()
 
-        connected=nx.connected_component_subgraphs(G.to_undirected())[0:3]
+        max_connected_components = random.randint(3,5)
+
+        connected=nx.connected_component_subgraphs(G.to_undirected())[0:max_connected_components]
+
+        self.connected_components = len(connected)
 
         self.G = G.subgraph(connected[0].nodes())
 
-        for cc in connected[1:3]:
+        for cc in connected[1:]:
             self.G = nx.compose(self.G,G.subgraph(cc.nodes()))
 
         
