@@ -267,61 +267,59 @@ class etl_controller(object):
                     curs.close()
 
             else:
-                pass
+                ## Test whether this is a valid submission
+                if s['type'] == 'link':
+                    if '.tumblr.com/post/' in s['url']:
+                        blog_name = s['url'].split('/')[2].split('.')[0]
+                        post_id = s['url'].split('/')[4]
+                        sql = """
+                        INSERT INTO wdmpg_targets (type,blog_name,value) 
+                        VALUES ('POST', %s, %s)
+                        ON DUPLICATE KEY UPDATE value = value
+                        """ 
+                        print sql%(blog_name,post_id)
+                        curs = self.mysql_connection.cursor()
+                        curs.execute(sql,(blog_name,post_id))
+                        curs.close()
 
-            ## Test whether this is a valid submission
-            if s['type'] == 'link':
-                if '.tumblr.com/post/' in s['url']:
-                    blog_name = s['url'].split('/')[2].split('.')[0]
-                    post_id = s['url'].split('/')[4]
-                    sql = """
-                    INSERT INTO wdmpg_targets (type,blog_name,value) 
-                    VALUES ('POST', %s, %s)
-                    ON DUPLICATE KEY UPDATE value = value
-                    """ 
-                    print sql%(blog_name,post_id)
-                    curs = self.mysql_connection.cursor()
-                    curs.execute(sql,(blog_name,post_id))
-                    curs.close()
-
-                    print "Tumblr post ETL for "+blog_name+" post id "+post_id
-                    print "     extract . . . "
-                    self.tb_extract_controller.pull_tumblr_post_by_id(blog_name,post_id)
-                    print "     transform . . . "
-                    transformed_df = self.transform_tb_posts()
-                    print "     load posts . . . "
-                    self.load_tb_posts(transformed_df)
-                    print "     load notes . . . "
-                    self.transform_and_load_tb_notes()
-                    print "     inspect reblog tree . . . "
-                    self.inspect_tb_reblog_tree(blog_name, post_id)
-                else:
-                    pass
-            else:
-                pass
-
-            # Test whether this submission is ready to GIF
-            if s['type'] == 'link':
-                if '.tumblr.com/' in s['url']:
-                    blog_name = s['url'].split('/')[2].split('.')[0]
-                    post_id = s['url'].split('/')[4]
-                    sql = """
-                    select reblogs_last_crawled from tb_posts
-                    where id = %s
-                    """ 
-                    print sql%(post_id)
-                    curs = self.mysql_connection.cursor()
-                    curs.execute(sql,(post_id,))
-                    reblogs_last_crawled = curs.fetchall()[0][0]
-                    if reblogs_last_crawled == None:
-                        print "not ready"
+                        print "Tumblr post ETL for "+blog_name+" post id "+post_id
+                        print "     extract . . . "
+                        self.tb_extract_controller.pull_tumblr_post_by_id(blog_name,post_id)
+                        print "     transform . . . "
+                        transformed_df = self.transform_tb_posts()
+                        print "     load posts . . . "
+                        self.load_tb_posts(transformed_df)
+                        print "     load notes . . . "
+                        self.transform_and_load_tb_notes()
+                        print "     inspect reblog tree . . . "
+                        self.inspect_tb_reblog_tree(blog_name, post_id)
                     else:
-                        print "ready to GIF ??? we have been tracking for "+str(round((reblogs_last_crawled - s['date']).total_seconds() / 3600,2))+" hours"
-                    curs.close()
+                        pass
                 else:
                     pass
-            else:
-                pass
+
+                # Test whether this submission is ready to GIF
+                if s['type'] == 'link':
+                    if '.tumblr.com/' in s['url']:
+                        blog_name = s['url'].split('/')[2].split('.')[0]
+                        post_id = s['url'].split('/')[4]
+                        sql = """
+                        select reblogs_last_crawled from tb_posts
+                        where id = %s
+                        """ 
+                        print sql%(post_id)
+                        curs = self.mysql_connection.cursor()
+                        curs.execute(sql,(post_id,))
+                        reblogs_last_crawled = curs.fetchall()[0][0]
+                        if reblogs_last_crawled == None:
+                            print "not ready"
+                        else:
+                            print "ready to GIF ??? we have been tracking for "+str(round((reblogs_last_crawled - s['date']).total_seconds() / 3600,2))+" hours"
+                        curs.close()
+                    else:
+                        pass
+                else:
+                    pass
 
 
     def tb_posts_etl(self):
