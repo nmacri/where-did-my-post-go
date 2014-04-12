@@ -227,7 +227,7 @@ class etl_controller(object):
 
         sql = """
         select * from wdmpg_submissions
-        where not response_generated
+        where response_generated = 0
         """
         curs = self.mysql_connection.cursor()
         curs.execute(sql)
@@ -1409,6 +1409,24 @@ class post_generator(object):
         """
         blog_name = post_url.split('/')[2].split('.')[0]
         post_id = post_url.split('/')[4]
+
+        # Retrieve Submission from API
+        response = self.tumblr_client.posts('wheredidmypostgo', id = submission_id)
+
+        if 'meta' in response.keys():
+
+            print "No Such Submission.  Assuming response generated and updating wdmpg_submissions."
+
+            sql = '''
+            UPDATE wdmpg_submissions 
+            SET response_generated = 1 
+            WHERE id = %s
+            '''
+            curs = self.mysql_connection.cursor()
+            curs.execute(sql,(submission_id,))
+            curs.close()
+        else:
+            submission_post = response['posts'][0]
         
         self.gif_generator.extract_reblog_graph(post_url)
         
@@ -1466,24 +1484,6 @@ class post_generator(object):
         curs.close()
         
         n_nodes = self.gif_generator.G.number_of_nodes()
-        
-        # Retrieve Submission from API
-        response = self.tumblr_client.posts('wheredidmypostgo', id = submission_id)
-
-        if 'meta' in response.keys():
-
-            print "No Such Submission.  Assuming response generated and updating wdmpg_submissions."
-
-            sql = '''
-            UPDATE wdmpg_submissions 
-            SET response_generated = 1 
-            WHERE id = %s
-            '''
-            curs = self.mysql_connection.cursor()
-            curs.execute(sql,(submission_id,))
-            curs.close()
-        else:
-            submission_post = response['posts'][0]
          
         if submission_post['title'] != 'Submitted Post':
             try:
