@@ -1022,9 +1022,8 @@ class gif_generator(object):
         curs.close()
 
         print "Inspecting graph one last time . . ."
+        self.etl_controller.tb_extract_controller.pull_tumblr_post_by_id(self.blog_name, self.post_id)
         self.etl_controller.inspect_tb_reblog_tree(self.blog_name, self.post_id)
-
-        
 
         sql = """
         select reblogged_from_name, blog_name, date
