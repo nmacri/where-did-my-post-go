@@ -243,7 +243,7 @@ class etl_controller(object):
 
             if 'meta' in response.keys():
 
-                print "No such submission.  Assuming response generated and updating wdmpg_submissions."
+                print "No such submission.  Assuming response generated and updating wdmpg_submissions and wdmpg_targets."
                 print "    submission_id = ", s['id']
                 print "    post_url = ", s['url']
 
@@ -256,14 +256,15 @@ class etl_controller(object):
                 curs.execute(sql)
                 curs.close()
 
-                sql = """
-                DELETE FROM wdmpg_targets 
-                WHERE TYPE = 'POST'
-                AND value = %s
-                """ % s['id']
-                curs = self.mysql_connection.cursor()
-                curs.execute(sql)
-                curs.close()
+                if '.tumblr.com/post/' in s['url']:
+                    sql = """
+                    DELETE FROM wdmpg_targets 
+                    WHERE TYPE = 'POST'
+                    AND value = %s
+                    """ % s['url'].split('/')[4]
+                    curs = self.mysql_connection.cursor()
+                    curs.execute(sql)
+                    curs.close()
 
             else:
                 pass
@@ -1463,15 +1464,16 @@ class post_generator(object):
             curs.execute(sql)
             curs.close()
 
-            sql = """
-            DELETE FROM wdmpg_targets 
-            WHERE TYPE = 'POST'
-            AND value = %s
-            """ % submission_id
-            curs = self.mysql_connection.cursor()
-            curs.execute(sql)
-            curs.close()
 
+            if '.tumblr.com/post/' in post_url:
+                sql = """
+                DELETE FROM wdmpg_targets 
+                WHERE TYPE = 'POST'
+                AND value = %s
+                """ % s['url'].split('/')[4]
+                curs = self.mysql_connection.cursor()
+                curs.execute(sql)
+                curs.close()
             return
         else:
             submission_post = response['posts'][0]
