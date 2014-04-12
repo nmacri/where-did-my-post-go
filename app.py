@@ -1662,5 +1662,6 @@ class post_generator(object):
             try:
                 self.edit_submission(submission_id,post_url)
             except Exception, e:
-                print(e)
+                import traceback
+                traceback.print_exc()
                 pass
