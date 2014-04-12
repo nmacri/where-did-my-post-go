@@ -1415,7 +1415,9 @@ class post_generator(object):
 
         if 'meta' in response.keys():
 
-            print "No Such Submission.  Assuming response generated and updating wdmpg_submissions."
+            print "No such submission.  Assuming response generated and updating wdmpg_submissions."
+            print "    submission_id = ", submission_id
+            print "    post_url = ", post_url
 
             sql = '''
             UPDATE wdmpg_submissions 
