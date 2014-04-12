@@ -245,7 +245,7 @@ class etl_controller(object):
 
                 print "No such submission.  Assuming response generated and updating wdmpg_submissions."
                 print "    submission_id = ", s['id']
-                print "    post_url = ", post_url
+                print "    post_url = ", s['url']
 
                 sql = '''
                 UPDATE wdmpg_submissions 
