@@ -16,6 +16,8 @@ from matplotlib import colors
 from dateutil.parser import parse
 import hashlib
 from pymarkovchain import MarkovChain
+import string
+import re
 
 from images2gif import writeGif
 from PIL import Image
@@ -1433,7 +1435,7 @@ class post_generator(object):
         # To generate the markov chain's language model, in case it's not present
         self.mc.generateDatabase(text)
         
-    def generate_random_title(self):
+    def generate_random_title(self, seed):
 
         def title_case(s):
            exceptions = ['a', 'an', 'the', 'at', 'by', 'for', 'in', 'of', 'on', 'to', 'up', 'and', 'as', 'but', 'it', 'or', 'nor']
@@ -1458,8 +1460,8 @@ class post_generator(object):
             else:
                 return s.subjectivity * s.polarity
         
-        raw_candidates = [self.mc.generateString() for i in range(500)]
-        caption_candidates = [c for c in raw_candidates if len(c.split(' ')) < 9 and len(c.split(' ')) > 3]
+        raw_candidates = [self.mc.generateStringWithSeed(seed) for i in range(1000)]
+        caption_candidates = [c for c in raw_candidates if len(c.split(' ')) < 10 and len(c.split(' ')) > 4]
         
         data = [(c, score(c)) for c in caption_candidates]
         sorted_data = sorted(data, key=lambda tup: tup[1], reverse=True)[0:3]
@@ -1558,10 +1560,10 @@ class post_generator(object):
         
         print "GIF is ready and under 1MB"
         
-        sql = "select blog_name, short_url, note_count from tb_posts where post_url = %s"
+        sql = "select id, blog_name, short_url, note_count from tb_posts where post_url = %s"
         curs = self.mysql_connection.cursor()
         curs.execute(sql,(post_url,))
-        blog_name, short_url, note_count = curs.fetchall()[0]
+        post_id, blog_name, short_url, note_count = curs.fetchall()[0]
         curs.close()
         
         n_nodes = self.gif_generator.G.number_of_nodes()
@@ -1584,6 +1586,15 @@ class post_generator(object):
             pass
         caption_html = caption_html + '<br><h4>The most influential nodes in this reblog graph are </h4>'
         
+        blog = self.tumblr_client.posts(blog_name, id = post_id)['blog']
+        post = self.tumblr_client.posts(blog_name, id = post_id)['posts'][0]
+
+        slug_seed = self.generate_title_seed(blog_name, post_id)
+        slug = "-".join([s.lower() for s in self.generate_random_title(slug_seed).split(" ")])
+        print "slug = "+slug
+
+
+
         import networkx as nx
         import pandas.io.sql as psql
         
@@ -1627,6 +1638,8 @@ class post_generator(object):
         photo_html = '<img src="'+draft_post['photos'][0]['original_size']['url']+'" alt="Reblog network of an original tumblr post by '+blog_name+'">'
         
         description_html = header_html+photo_html+caption_html+influencer_html
+
+
         
         blogname = 'wheredidmypostgo'
         
@@ -1640,7 +1653,8 @@ class post_generator(object):
                   'state': 'submission',
                   'description': description_html.encode('ascii','ignore'),
                   'format': 'html',
-                  'title': 'Submitted Post'}
+                  'title': 'Submitted Post',
+                  'slug': slug}
         
         url = "/v2/blog/%s/post/edit" % blogname
         
@@ -1670,3 +1684,511 @@ class post_generator(object):
                 import traceback
                 traceback.print_exc()
                 pass
+
+
+    def determine_photo_post_type(self, post_url):
+        
+        try:
+            sql = """
+            select id, blog_name, featured_in_tag
+            from tb_posts
+            where post_url = %s
+            limit 1
+            """ 
+            curs = self.mysql_connection.cursor()
+            curs.execute(sql,(post_url,))
+            post_id, blog_name, featured_in_tag = curs.fetchall()[0]
+            print "featured_in_tag = " + str(featured_in_tag)
+            curs.close()
+        except:
+            opener = urllib2.build_opener(urllib2.HTTPRedirectHandler)
+            request = opener.open(post_url)
+            post_url = request.url
+            
+            sql = """
+            select id, blog_name, featured_in_tag
+            from tb_posts
+            where post_url = %s
+            limit 1
+            """ 
+            curs = self.mysql_connection.cursor()
+            curs.execute(sql,(post_url,))
+            post_id, blog_name, featured_in_tag = curs.fetchall()[0]
+            print "featured_in_tag = " + str(featured_in_tag)
+            curs.close()
+        
+        sql = """
+        select count(value)
+        from wdmpg_targets
+        where blog_name = %s
+        """ 
+        curs = self.mysql_connection.cursor()
+        curs.execute(sql,(blog_name,))
+        target = curs.fetchall()[0][0]
+        print "target = ", target
+        if target > 0:
+            anon = True
+        else:
+            anon = False
+        curs.close()
+        
+        if blog_name == 'wheredidmypostgo':
+            return 'meta'
+        elif anon:
+            return 'anonymous'
+        elif featured_in_tag != None:
+            return 'featured'
+        else: 
+            return 'named'
+        
+               
+    def generate_photo_posts(self, count = 5):
+        sql = """
+        select reblogged_root_url as url
+        from (select reblogged_root_url, count(id) as count
+        from tb_posts
+        where reblogged_root_url is not null
+        ## and gif posted either never or a long time ago
+        group by reblogged_root_url
+        order by count(id) DESC
+        limit 300) as top_graphs
+        where reblogged_root_url not in (select url from wdmpg_submissions)
+        order by rand() limit %s
+        """ % count
+        curs = self.mysql_connection.cursor()
+        curs.execute(sql)
+        
+        for url in curs.fetchall():
+            reblogged_root_url = url[0]
+            try:
+                print "reblogged_root_url = " + reblogged_root_url
+                post_type = self.determine_photo_post_type(reblogged_root_url)
+                print "post_type = " + post_type
+                print "\n"
+                if post_type == 'anonymous':
+                    self.generate_anonymous_photo_post(reblogged_root_url)
+                if post_type == 'named':
+                    self.generate_named_photo_post(reblogged_root_url)
+                if post_type == 'featured':
+                    self.generate_featured_photo_post(reblogged_root_url)
+                if post_type == 'meta':
+                    self.generate_meta_photo_post(reblogged_root_url)
+            except Exception, e:
+                import traceback
+                traceback.print_exc()
+                pass
+            
+        curs.close()
+    
+    
+    def generate_title_seed(self, blog_name, post_id):
+        
+        post = self.tumblr_client.posts(blog_name, id=post_id)['posts'][0]
+        
+        if len(post['slug']) > 0:
+            return str(" ".join(post['slug'].split('-')[:2]))
+        elif len(post['tags']) > 0:
+            return str(sorted(post['tags'], key=lambda s: len([c for c in s if c ==' ']), reverse = True)[0])
+        else:
+            try:
+                return str(" ".join(post['title'].split(' ')[:2]))
+            except:
+                return "reblog network"
+    
+    def generate_anonymous_photo_post(self, reblogged_root_url):
+        sql = """
+        select id, blog_name, note_count
+        from tb_posts
+        where post_url = %s
+        limit 1
+        """ 
+        curs = self.mysql_connection.cursor()
+        curs.execute(sql,(reblogged_root_url,))
+        post_id, blog_name, note_count = curs.fetchall()[0]
+        curs.close()
+        
+        ######
+        
+        self.gif_generator.extract_reblog_graph(reblogged_root_url)
+        
+        while True:
+            try:
+                self.gif_generator.pick_colors()
+                break
+            except:
+                curs = self.mysql_connection.cursor()
+                sql = "select name from tb_blogs order by rand() limit 1"
+                curs.execute(sql)
+                self.gif_generator.blog_name = curs.fetchall()[0][0]
+                curs.close()
+                self.gif_generator.pick_colors()
+                break
+                
+        self.gif_generator.draw_graph_frames()
+        self.gif_generator.write_frames_to_gif()
+        
+        # Make Sure GIF is < 1MB
+        gif_stats = os.stat('images/'+self.gif_generator.prev_filename)
+    
+        attempts = 0
+        
+        while gif_stats.st_size > 1048576 and attempts < 8:
+            print "GIF too large, trying again . . ."
+            attempts += 1
+            while True:
+                self.gif_generator.extract_reblog_graph(reblogged_root_url, frame_rate_multiplier = 1 - float(attempts)/16)
+                try:
+                    self.gif_generator.pick_colors()
+                    break
+                except:
+                    curs = self.mysql_connection.cursor()
+                    sql = "select name from tb_blogs order by rand() limit 1"
+                    curs.execute(sql)
+                    self.gif_generator.blog_name = curs.fetchall()[0][0]
+                    curs.close()
+                    self.gif_generator.pick_colors()
+                    break
+            self.gif_generator.draw_graph_frames()
+            self.gif_generator.write_frames_to_gif()
+
+            gif_stats = os.stat('images/'+self.gif_generator.prev_filename)
+            
+            if attempts > 8:
+                raise BaseException("more than 8 attempts")
+        
+        print "GIF is ready and under 1MB"
+        
+        slug_seed = "reblog network"
+        slug = "-".join([s.lower() for s in self.generate_random_title(slug_seed).split(" ")])
+        print "slug = "+slug
+        
+        post = self.tumblr_client.posts(blog_name, id = post_id)['posts'][0]
+        
+        n_nodes = self.gif_generator.G.number_of_nodes()
+        
+        caption_html = '<h4> Reblog network of an anonymous tumblr post. </h4>'
+        caption_html = caption_html + '<br><p><p></p>This image is based on '+str(n_nodes)+' reblogs ('+ str(round(float(n_nodes)/post['note_count']*100,5))+'% of the total number of notes on the post).  '
+        caption_html = caption_html +'<br><br><p><a href="http://wheredidmypostgo.tumblr.com">Where Did my Post Go?</a> is a bot that posts GIFs generated from the reblog networks of posts that you submit '
+        
+        caption_html = caption_html + """
+                                      (more info: 
+                                      <a href='http://wheredidmypostgo.tumblr.com'>tumblr</a>, 
+                                      <a href='https://github.com/nmacri/where-did-my-post-go'>github</a>, 
+                                      <a href='http://www.reddit.com/r/dataisbeautiful/comments/22dkm3/reblog_network_of_an_anonymous_tumblr_post_oc/'>reddit</a>.)</p>
+                                      """
+        tags = ['gif','data','network','graph','tumblr','data visualization','animation','animated','color','design','code','art','digital art','generative','datamosh','glitch','abstract','glitch art']
+        pd.np.random.shuffle(tags)
+        
+        tags = ['wheredidmypostgo'] + tags
+        
+        response = self.tumblr_client.create_photo('wheredidmypostgo',
+                                        data='images/'+self.gif_generator.prev_filename,
+                                        tags = tags,
+                                        caption = caption_html,
+                                        slug = slug,
+                                        state='queue')
+        print response
+        
+        return response
+    
+    def generate_named_photo_post(self, reblogged_root_url):
+        sql = """
+        select id, blog_name, note_count
+        from tb_posts
+        where post_url = %s
+        limit 1
+        """ 
+        curs = self.mysql_connection.cursor()
+        curs.execute(sql,(reblogged_root_url,))
+        post_id, blog_name, note_count = curs.fetchall()[0]
+        curs.close()
+        
+        ######
+        
+        self.gif_generator.extract_reblog_graph(reblogged_root_url)
+        
+        while True:
+            try:
+                self.gif_generator.pick_colors()
+                break
+            except:
+                curs = self.mysql_connection.cursor()
+                sql = "select name from tb_blogs order by rand() limit 1"
+                curs.execute(sql)
+                self.gif_generator.blog_name = curs.fetchall()[0][0]
+                curs.close()
+                self.gif_generator.pick_colors()
+                break
+                
+        self.gif_generator.draw_graph_frames()
+        self.gif_generator.write_frames_to_gif()
+        
+        # Make Sure GIF is < 1MB
+        gif_stats = os.stat('images/'+self.gif_generator.prev_filename)
+    
+        attempts = 0
+        
+        while gif_stats.st_size > 1048576 and attempts < 8:
+            print "GIF too large, trying again . . ."
+            attempts += 1
+            while True:
+                self.gif_generator.extract_reblog_graph(reblogged_root_url, frame_rate_multiplier = 1 - float(attempts)/16)
+                try:
+                    self.gif_generator.pick_colors()
+                    break
+                except:
+                    curs = self.mysql_connection.cursor()
+                    sql = "select name from tb_blogs order by rand() limit 1"
+                    curs.execute(sql)
+                    self.gif_generator.blog_name = curs.fetchall()[0][0]
+                    curs.close()
+                    self.gif_generator.pick_colors()
+                    break
+            self.gif_generator.draw_graph_frames()
+            self.gif_generator.write_frames_to_gif()
+
+            gif_stats = os.stat('images/'+self.gif_generator.prev_filename)
+            
+            if attempts > 8:
+                raise BaseException("more than 8 attempts")
+        
+        print "GIF is ready and under 1MB"
+        
+        blog = self.tumblr_client.posts(blog_name, id = post_id)['blog']
+        post = self.tumblr_client.posts(blog_name, id = post_id)['posts'][0]
+        
+        n_nodes = self.gif_generator.G.number_of_nodes()
+        
+        caption_html = '<h4> Reblog network of an <a href="'+post['post_url']+'">original tumblr post</a> by <a href="'+blog['url']+'">'+blog['name']+'</a></h4>'
+        caption_html = caption_html + '<br><p><p></p>This image is based on '+str(n_nodes)+' reblogs ('+ str(round(float(n_nodes)/post['note_count']*100,5))+'% of the total number of notes on the post).  '
+        caption_html = caption_html +'<br><br><p><a href="http://wheredidmypostgo.tumblr.com">Where Did my Post Go?</a> is a bot that posts GIFs generated from the reblog networks of posts that you submit '
+        
+        caption_html = caption_html + """
+                                      (more info: 
+                                      <a href='http://wheredidmypostgo.tumblr.com'>tumblr</a>, 
+                                      <a href='https://github.com/nmacri/where-did-my-post-go'>github</a>, 
+                                      <a href='http://www.reddit.com/r/dataisbeautiful/comments/22dkm3/reblog_network_of_an_anonymous_tumblr_post_oc/'>reddit</a>).</p>
+                                      """
+        
+        slug_seed = self.generate_title_seed(blog_name, post_id)
+        slug = "-".join([s.lower() for s in self.generate_random_title(slug_seed).split(" ")])
+        print "slug = "+slug
+        
+        tags = ['gif','data','network','graph','tumblr','data visualization','animation','animated','color','design','code','art','digital art','generative','datamosh','glitch','abstract','glitch art']
+        pd.np.random.shuffle(tags)
+        
+        tags = ['wheredidmypostgo'] + tags
+        
+        response = self.tumblr_client.create_photo('wheredidmypostgo',
+                                        data='images/'+self.gif_generator.prev_filename,
+                                        tags = tags,
+                                        caption = caption_html,
+                                        slug = slug,
+                                        state='queue')
+        print response
+        
+        return response
+    
+    def generate_featured_photo_post(self, reblogged_root_url):
+        sql = """
+        select id, blog_name, note_count, featured_in_tag
+        from tb_posts
+        where post_url = %s
+        limit 1
+        """ 
+        curs = self.mysql_connection.cursor()
+        curs.execute(sql,(reblogged_root_url,))
+        post_id, blog_name, note_count, featured_in_tag = curs.fetchall()[0]
+        curs.close()
+        
+        ######
+        
+        self.gif_generator.extract_reblog_graph(reblogged_root_url)
+        
+        while True:
+            try:
+                self.gif_generator.pick_colors()
+                break
+            except:
+                curs = self.mysql_connection.cursor()
+                sql = "select name from tb_blogs order by rand() limit 1"
+                curs.execute(sql)
+                self.gif_generator.blog_name = curs.fetchall()[0][0]
+                curs.close()
+                self.gif_generator.pick_colors()
+                break
+                
+        self.gif_generator.draw_graph_frames()
+        self.gif_generator.write_frames_to_gif()
+        
+        # Make Sure GIF is < 1MB
+        gif_stats = os.stat('images/'+self.gif_generator.prev_filename)
+    
+        attempts = 0
+        
+        while gif_stats.st_size > 1048576 and attempts < 8:
+            print "GIF too large, trying again . . ."
+            attempts += 1
+            while True:
+                self.gif_generator.extract_reblog_graph(reblogged_root_url, frame_rate_multiplier = 1 - float(attempts)/16)
+                try:
+                    self.gif_generator.pick_colors()
+                    break
+                except:
+                    curs = self.mysql_connection.cursor()
+                    sql = "select name from tb_blogs order by rand() limit 1"
+                    curs.execute(sql)
+                    self.gif_generator.blog_name = curs.fetchall()[0][0]
+                    curs.close()
+                    self.gif_generator.pick_colors()
+                    break
+            self.gif_generator.draw_graph_frames()
+            self.gif_generator.write_frames_to_gif()
+
+            gif_stats = os.stat('images/'+self.gif_generator.prev_filename)
+            
+            if attempts > 8:
+                raise BaseException("more than 8 attempts")
+        
+        print "GIF is ready and under 1MB"
+        
+        blog = self.tumblr_client.posts(blog_name, id = post_id)['blog']
+        post = self.tumblr_client.posts(blog_name, id = post_id)['posts'][0]
+        
+        n_nodes = self.gif_generator.G.number_of_nodes()
+        
+        caption_html = '<h4> Reblog network of a <a href="'+post['post_url']+'">featured tumblr post</a> by <a href="'+blog['url']+'">'+blog['name']+'</a> (featured in: '+featured_in_tag+')</h4>'
+        caption_html = caption_html + '<br><p><p></p>This image is based on '+str(n_nodes)+' reblogs ('+ str(round(float(n_nodes)/post['note_count']*100,5))+'% of the total number of notes on the post).  '
+        caption_html = caption_html +'<br><br><p><a href="http://wheredidmypostgo.tumblr.com">Where Did my Post Go?</a> is a bot that posts GIFs generated from the reblog networks of posts that you submit '
+        
+        caption_html = caption_html + """
+                                      (more info: 
+                                      <a href='http://wheredidmypostgo.tumblr.com'>tumblr</a>, 
+                                      <a href='https://github.com/nmacri/where-did-my-post-go'>github</a>, 
+                                      <a href='http://www.reddit.com/r/dataisbeautiful/comments/22dkm3/reblog_network_of_an_anonymous_tumblr_post_oc/'>reddit</a>).</p>
+                                      """
+        
+        slug_seed = self.generate_title_seed(blog_name, post_id)
+        slug = "-".join([s.lower() for s in self.generate_random_title(slug_seed).split(" ")])
+        print "slug = "+slug
+        
+        tags = ['gif','data','network','graph','tumblr','data visualization','animation','animated','color','design','code','art','digital art','generative','datamosh','glitch','abstract','glitch art']
+        pd.np.random.shuffle(tags)
+        
+        tags = ['wheredidmypostgo'] + tags
+        
+        
+        response = self.tumblr_client.create_photo('wheredidmypostgo',
+                                        data='images/'+self.gif_generator.prev_filename,
+                                        tags = tags,
+                                        caption = caption_html,
+                                        slug = slug,
+                                        state='queue')
+        print response
+        
+        return response
+    
+    def generate_meta_photo_post(self, reblogged_root_url):
+        sql = """
+        select id, blog_name, note_count
+        from tb_posts
+        where post_url = %s
+        limit 1
+        """ 
+        curs = self.mysql_connection.cursor()
+        curs.execute(sql,(reblogged_root_url,))
+        post_id, blog_name, note_count = curs.fetchall()[0]
+        curs.close()
+        
+        ######
+        
+        self.gif_generator.extract_reblog_graph(reblogged_root_url)
+        
+        while True:
+            try:
+                curs = self.mysql_connection.cursor()
+                sql = "select name from tb_blogs order by rand() limit 1"
+                curs.execute(sql)
+                self.gif_generator.blog_name = curs.fetchall()[0][0]
+                curs.close()
+                self.gif_generator.pick_colors()
+                break
+            except:
+                curs = self.mysql_connection.cursor()
+                sql = "select name from tb_blogs order by rand() limit 1"
+                curs.execute(sql)
+                self.gif_generator.blog_name = curs.fetchall()[0][0]
+                curs.close()
+                self.gif_generator.pick_colors()
+                break
+                
+        self.gif_generator.draw_graph_frames()
+        self.gif_generator.write_frames_to_gif()
+        
+        # Make Sure GIF is < 1MB
+        gif_stats = os.stat('images/'+self.gif_generator.prev_filename)
+    
+        attempts = 0
+        
+        while gif_stats.st_size > 1048576 and attempts < 8:
+            print "GIF too large, trying again . . ."
+            attempts += 1
+            while True:
+                self.gif_generator.extract_reblog_graph(reblogged_root_url, frame_rate_multiplier = 1 - float(attempts)/16)
+                try:
+                    curs = self.mysql_connection.cursor()
+                    sql = "select name from tb_blogs order by rand() limit 1"
+                    curs.execute(sql)
+                    self.gif_generator.blog_name = curs.fetchall()[0][0]
+                    curs.close()
+                    self.gif_generator.pick_colors()
+                    break
+                except:
+                    curs = self.mysql_connection.cursor()
+                    sql = "select name from tb_blogs order by rand() limit 1"
+                    curs.execute(sql)
+                    self.gif_generator.blog_name = curs.fetchall()[0][0]
+                    curs.close()
+                    self.gif_generator.pick_colors()
+                    break
+            self.gif_generator.draw_graph_frames()
+            self.gif_generator.write_frames_to_gif()
+
+            gif_stats = os.stat('images/'+self.gif_generator.prev_filename)
+            
+            if attempts > 8:
+                raise BaseException("more than 8 attempts")
+        
+        print "GIF is ready and under 1MB"
+        
+        blog = self.tumblr_client.posts(blog_name, id = post_id)['blog']
+        post = self.tumblr_client.posts(blog_name, id = post_id)['posts'][0]
+        
+        n_nodes = self.gif_generator.G.number_of_nodes()
+        
+        caption_html = caption_html + '<h4> Meta Post</h4> <br><br><p> Reblog network of an <a href="'+post['post_url']+'">original tumblr post</a> by <a href="'+blog['url']+'">'+blog['name']+'</a></p>'
+        caption_html = caption_html + '<br><p><p></p>This image is based on '+str(n_nodes)+' reblogs ('+ str(round(float(n_nodes)/post['note_count']*100,5))+'% of the total number of notes on the post).  '
+        caption_html = caption_html +'<br><br><p><a href="http://wheredidmypostgo.tumblr.com">Where Did my Post Go?</a> is a bot that posts GIFs generated from the reblog networks of posts that you submit '
+        
+        caption_html = caption_html + """
+                                      (more info: 
+                                      <a href='http://wheredidmypostgo.tumblr.com'>tumblr</a>, 
+                                      <a href='https://github.com/nmacri/where-did-my-post-go'>github</a>, 
+                                      <a href='http://www.reddit.com/r/dataisbeautiful/comments/22dkm3/reblog_network_of_an_anonymous_tumblr_post_oc/'>reddit</a>).</p>
+                                      """     
+        
+        
+        tags = ['gif','data','network','graph','tumblr','data visualization','animation','animated','color','design','code','art','digital art','generative','datamosh','glitch','abstract','glitch art']
+        pd.np.random.shuffle(tags)
+        
+        tags = ['meta post','wheredidmypostgo'] + tags
+        
+        response = self.tumblr_client.create_photo('wheredidmypostgo',
+                                        data='images/'+self.gif_generator.prev_filename,
+                                        tags = tags,
+                                        caption = caption_html,
+                                        slug = 'reblog-network-meta-post',
+                                        state='queue')
+        print response
+        
+        return response
