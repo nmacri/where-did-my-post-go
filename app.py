@@ -1050,6 +1050,8 @@ class etl_controller(object):
             for k,v in metrics.items():
                 if type(v) == pd.np.float64:
                     metrics[k] = float(v)
+                if type(v) == pd.np.nan:
+                    metrics[k] = None
             metric_list.append(metrics)
 
         curs = self.mysql_connection.cursor()
