@@ -1,6 +1,7 @@
 import json
 import os
 import urllib, cStringIO
+import urllib2
 from collections import Counter
 from datetime import datetime,date,timedelta
 import copy
@@ -1054,6 +1055,10 @@ class gif_generator(object):
 
     def extract_reblog_graph(self, post_url, frame_rate_multiplier=1):
         
+        opener = urllib2.build_opener(urllib2.HTTPRedirectHandler)
+        request = opener.open(post_url)
+        post_url = request.url
+
         G = nx.DiGraph()
 
         sql = """
@@ -1099,7 +1104,7 @@ class gif_generator(object):
             G.edge[edge[0]][edge[1]]['date'] = edge[2]
         curs.close()
 
-        max_connected_components = random.randint(3,5)
+        max_connected_components = random.randint(3,6)
 
         connected=nx.connected_component_subgraphs(G.to_undirected())[0:max_connected_components]
 
