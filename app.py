@@ -1615,6 +1615,11 @@ class post_generator(object):
                 raise BaseException("more than 8 attempts")
         
         print "GIF is ready and under 1MB"
+
+        # handle redirects
+        opener = urllib2.build_opener(urllib2.HTTPRedirectHandler)
+        request = opener.open(post_url)
+        post_url = request.url
         
         sql = "select id, blog_name, short_url, note_count from tb_posts where post_url = %s"
         curs = self.mysql_connection.cursor()
