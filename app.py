@@ -1085,7 +1085,7 @@ class etl_controller(object):
                 m[k] = v
                 if type(v) == pd.np.float64:
                     m[k] = float(v)
-                if type(v) == pd.np.nan:
+                if pd.isnull(v):
                     m[k] = None
             metric_list.append(m)
 
