@@ -630,7 +630,7 @@ class etl_controller(object):
             if reblogs_last_crawled != None :
                 return (datetime.now()-reblogs_last_crawled).total_seconds()/86400 
             elif (note_count == None):
-                return = 500 #Fake value to bump these up in the queue
+                return 500 #Fake value to bump these up in the queue
             else:
                 return (datetime.now()-date).total_seconds()/86400
 
@@ -638,7 +638,7 @@ class etl_controller(object):
             if notes_per_day != None:
                 return notes_per_day
             elif (note_count == None):
-                return = 500 #Fake value to bump these up in the queue
+                return 500 #Fake value to bump these up in the queue
             else:
                 return float(note_count) / ((datetime.now()-date).total_seconds()/86400)
 
