@@ -289,18 +289,20 @@ class etl_controller(object):
                         curs = self.mysql_connection.cursor()
                         curs.execute(sql,(blog_name,post_id))
                         curs.close()
-
-                        print "Tumblr post ETL for "+blog_name+" post id "+str(post_id)
-                        print "     extract . . . "
-                        self.tb_extract_controller.pull_tumblr_post_by_id(blog_name,post_id)
-                        print "     transform . . . "
-                        transformed_df = self.transform_tb_posts()
-                        print "     load posts . . . "
-                        self.load_tb_posts(transformed_df)
-                        print "     load notes . . . "
-                        self.transform_and_load_tb_notes()
-                        print "     inspect reblog tree . . . "
-                        self.inspect_tb_reblog_tree(blog_name, post_id)
+                        try:
+                            print "Tumblr post ETL for "+blog_name+" post id "+str(post_id)
+                            print "     extract . . . "
+                            self.tb_extract_controller.pull_tumblr_post_by_id(blog_name,post_id)
+                            print "     transform . . . "
+                            transformed_df = self.transform_tb_posts()
+                            print "     load posts . . . "
+                            self.load_tb_posts(transformed_df)
+                            print "     load notes . . . "
+                            self.transform_and_load_tb_notes()
+                            print "     inspect reblog tree . . . "
+                            self.inspect_tb_reblog_tree(blog_name, post_id)
+                        except Exception, e:
+                            pass 
                     else:
                         pass
                 else:
@@ -311,73 +313,85 @@ class etl_controller(object):
         blog_names = self.target_blogs
         pd.np.random.shuffle(blog_names)
         for blog_name in blog_names:
-            
-            print "tb posts etl for ",blog_name
 
-            # test new blog inspection method
-            self.inspect_tb_blog_info(blog_name)
-            print "   loaded blog info."
-            print "   extracting posts . . ."
-
-            # how many posts should we extract?
-            curs = self.mysql_connection.cursor(buffered=True)
-            sql = "select posts from tb_blogs where name = '%s' limit 1" % blog_name
-            curs.execute(sql)
             try:
-                current_posts = int(curs.fetchall()[0][0])
-            except:
-                current_posts = 0
-            curs.close()
+                print "tb posts etl for ",blog_name
+
+                # test new blog inspection method
+                self.inspect_tb_blog_info(blog_name)
+                print "   loaded blog info."
+                print "   extracting posts . . ."
+
+                # how many posts should we extract?
+                curs = self.mysql_connection.cursor(buffered=True)
+                sql = "select posts from tb_blogs where name = '%s' limit 1" % blog_name
+                curs.execute(sql)
+                try:
+                    current_posts = int(curs.fetchall()[0][0])
+                except:
+                    current_posts = 0
+                curs.close()
 
 
-            # This convoluted logic is here to so that for blogs like americanapparel
-            # which currently has ~15,000 posts we won't get stuck and block the rest of the ETL
-            if current_posts > 500:
-                posts_to_extract = 500
-            else:
-                posts_to_extract = current_posts + 100
+                # This convoluted logic is here to so that for blogs like americanapparel
+                # which currently has ~15,000 posts we won't get stuck and block the rest of the ETL
+                if current_posts > 500:
+                    posts_to_extract = 500
+                else:
+                    posts_to_extract = current_posts + 100
 
-            # test new post loading method
-            self.tb_extract_controller.pull_tumblr_posts(blog_name, posts_to_extract)
-            print "   posts extracted."
+                # test new post loading method
+                self.tb_extract_controller.pull_tumblr_posts(blog_name, posts_to_extract)
+                print "   posts extracted."
 
-            transformed_df = self.transform_tb_posts()
-            print "   posts transformed."
-            print "   loading posts, photos and tags . . ."
-            self.load_tb_posts(transformed_df)
-            print "   posts, photos and tags loaded."
+                transformed_df = self.transform_tb_posts()
+                print "   posts transformed."
+                print "   loading posts, photos and tags . . ."
+                self.load_tb_posts(transformed_df)
+                print "   posts, photos and tags loaded."
 
-            print "   loading notes . . ."
-            self.transform_and_load_tb_notes()
-            print "   notes loaded."
+                print "   loading notes . . ."
+                self.transform_and_load_tb_notes()
+                print "   notes loaded."
 
-            curs.close()
+                curs.close()
+            except Exception, e:
+                pass
+            
+            
 
         tag_targets = self.target_tags
         pd.np.random.shuffle(tag_targets)
         for tag in tag_targets:
-            print "Tumblr tags ETL for "+tag
-            print "     extract . . . "
-            self.tb_extract_controller.pull_tagged_tumblr_posts(tag, 500)
-            print "     transform . . . "
-            transformed_df = self.transform_tb_posts()
-            print "     load posts . . . "
-            self.load_tb_posts(transformed_df)
-            print "     load notes . . . "
-            self.transform_and_load_tb_notes()
+            try:
+                print "Tumblr tags ETL for "+tag
+                print "     extract . . . "
+                self.tb_extract_controller.pull_tagged_tumblr_posts(tag, 500)
+                print "     transform . . . "
+                transformed_df = self.transform_tb_posts()
+                print "     load posts . . . "
+                self.load_tb_posts(transformed_df)
+                print "     load notes . . . "
+                self.transform_and_load_tb_notes()
+            except Exception, e:
+                pass
+            
 
         post_targets = self.target_posts
         pd.np.random.shuffle(post_targets)
         for post in post_targets:
-            print "Tumblr posts ETL for "+post['blog_name']+" post id "+post['post_id']
-            print "     extract . . . "
-            self.tb_extract_controller.pull_tumblr_post_by_id(post['blog_name'],post['post_id'])
-            print "     transform . . . "
-            transformed_df = self.transform_tb_posts()
-            print "     load posts . . . "
-            self.load_tb_posts(transformed_df)
-            print "     load notes . . . "
-            self.transform_and_load_tb_notes()
+            try:
+                print "Tumblr posts ETL for "+post['blog_name']+" post id "+post['post_id']
+                print "     extract . . . "
+                self.tb_extract_controller.pull_tumblr_post_by_id(post['blog_name'],post['post_id'])
+                print "     transform . . . "
+                transformed_df = self.transform_tb_posts()
+                print "     load posts . . . "
+                self.load_tb_posts(transformed_df)
+                print "     load notes . . . "
+                self.transform_and_load_tb_notes()
+            except Exception, e:
+                pass
 
     def etl_target_posts(self):
         
@@ -385,17 +399,20 @@ class etl_controller(object):
         pd.np.random.shuffle(post_targets)
         
         for post in post_targets:
-            print "Tumblr posts ETL for "+post['blog_name']+" post id "+post['post_id']
-            print "     extract . . . "
-            self.tb_extract_controller.pull_tumblr_post_by_id(post['blog_name'],post['post_id'])
-            print "     transform . . . "
-            transformed_df = self.transform_tb_posts()
-            print "     load posts . . . "
-            self.load_tb_posts(transformed_df)
-            print "     load notes . . . "
-            self.transform_and_load_tb_notes()
-            print "     inspecting reblog tree . . . "
-            self.inspect_tb_reblog_tree(post['blog_name'], post['post_id'])
+            try:
+                print "Tumblr posts ETL for "+post['blog_name']+" post id "+post['post_id']
+                print "     extract . . . "
+                self.tb_extract_controller.pull_tumblr_post_by_id(post['blog_name'],post['post_id'])
+                print "     transform . . . "
+                transformed_df = self.transform_tb_posts()
+                print "     load posts . . . "
+                self.load_tb_posts(transformed_df)
+                print "     load notes . . . "
+                self.transform_and_load_tb_notes()
+                print "     inspecting reblog tree . . . "
+                self.inspect_tb_reblog_tree(post['blog_name'], post['post_id'])
+            except Exception, e:
+                pass
 
 
     def transform_tb_posts(self):
@@ -539,41 +556,53 @@ class etl_controller(object):
         blog_targets = self.target_blogs
         pd.np.random.shuffle(blog_targets)
         for blog_name in blog_targets:
-            print "Fast Tumblr posts ETL for "+blog_name
-            print "     extract . . . "
-            self.tb_extract_controller.pull_tumblr_posts(blog_name, 20)
-            print "     transform . . . "
-            transformed_df = self.transform_tb_posts()
-            print "     load posts . . . "
-            self.load_tb_posts(transformed_df)
-            print "     load notes . . . "
-            self.transform_and_load_tb_notes()
+            try:
+                print "Fast Tumblr posts ETL for "+blog_name
+                print "     extract . . . "
+                self.tb_extract_controller.pull_tumblr_posts(blog_name, 20)
+                print "     transform . . . "
+                transformed_df = self.transform_tb_posts()
+                print "     load posts . . . "
+                self.load_tb_posts(transformed_df)
+                print "     load notes . . . "
+                self.transform_and_load_tb_notes()
+            except Exception, e:
+                pass
+            
 
         tag_targets = self.target_tags
         pd.np.random.shuffle(tag_targets)
         for tag in tag_targets:
-            print "Fast Tumblr tags ETL for "+tag
-            print "     extract . . . "
-            self.tb_extract_controller.pull_tagged_tumblr_posts(tag, 20)
-            print "     transform . . . "
-            transformed_df = self.transform_tb_posts()
-            print "     load posts . . . "
-            self.load_tb_posts(transformed_df)
-            print "     load notes . . . "
-            self.transform_and_load_tb_notes()
+            try:
+                print "Fast Tumblr tags ETL for "+tag
+                print "     extract . . . "
+                self.tb_extract_controller.pull_tagged_tumblr_posts(tag, 20)
+                print "     transform . . . "
+                transformed_df = self.transform_tb_posts()
+                print "     load posts . . . "
+                self.load_tb_posts(transformed_df)
+                print "     load notes . . . "
+                self.transform_and_load_tb_notes()
+            except Exception, e:
+                pass
+            
 
         post_targets = self.target_posts
         pd.np.random.shuffle(post_targets)
         for post in post_targets:
-            print "Fast Tumblr posts ETL for "+post['blog_name']+" post id "+post['post_id']
-            print "     extract . . . "
-            self.tb_extract_controller.pull_tumblr_post_by_id(post['blog_name'],post['post_id'])
-            print "     transform . . . "
-            transformed_df = self.transform_tb_posts()
-            print "     load posts . . . "
-            self.load_tb_posts(transformed_df)
-            print "     load notes . . . "
-            self.transform_and_load_tb_notes()
+            try:
+                print "Fast Tumblr posts ETL for "+post['blog_name']+" post id "+post['post_id']
+                print "     extract . . . "
+                self.tb_extract_controller.pull_tumblr_post_by_id(post['blog_name'],post['post_id'])
+                print "     transform . . . "
+                transformed_df = self.transform_tb_posts()
+                print "     load posts . . . "
+                self.load_tb_posts(transformed_df)
+                print "     load notes . . . "
+                self.transform_and_load_tb_notes()
+            except Exception, e:
+                pass
+            
 
         curs = self.mysql_connection.cursor(buffered=True)
         sql = """
@@ -586,17 +615,21 @@ class etl_controller(object):
         blogs_and_posts = [i for i in curs.fetchall()]
         curs.close()
         for blog_name,post_id in blogs_and_posts:
-            print "Inspecting "+blog_name+" post id "+post_id
-            print "     extract . . . "
-            self.tb_extract_controller.pull_tumblr_post_by_id(blog_name,post_id)
-            print "     transform . . . "
-            transformed_df = self.transform_tb_posts()
-            print "     load posts . . . "
-            self.load_tb_posts(transformed_df)
-            print "     load notes . . . "
-            self.transform_and_load_tb_notes()
-            print "     inspect reblog tree . . . "
-            self.inspect_tb_reblog_tree(blog_name, post_id)
+            try:
+                print "Inspecting "+blog_name+" post id "+post_id
+                print "     extract . . . "
+                self.tb_extract_controller.pull_tumblr_post_by_id(blog_name,post_id)
+                print "     transform . . . "
+                transformed_df = self.transform_tb_posts()
+                print "     load posts . . . "
+                self.load_tb_posts(transformed_df)
+                print "     load notes . . . "
+                self.transform_and_load_tb_notes()
+                print "     inspect reblog tree . . . "
+                self.inspect_tb_reblog_tree(blog_name, post_id)
+            except Exception, e:
+                pass
+            
 
 
     def tb_reblog_tree_etl_targets(self):
@@ -644,17 +677,21 @@ class etl_controller(object):
         from operator import itemgetter
 
         for blog_name,post_id,notes_per_day in sorted([(p['blog_name'],p['id'],p['notes_per_day'] * abs(p['days_since_crawl'])) for p in posts],key=itemgetter(2), reverse=True)[0:500]:
-            print "Inspecting "+blog_name+" post id "+str(post_id)
-            print "     extract . . . "
-            self.tb_extract_controller.pull_tumblr_post_by_id(blog_name,post_id)
-            print "     transform . . . "
-            transformed_df = self.transform_tb_posts()
-            print "     load post . . . "
-            self.load_tb_posts(transformed_df)
-            print "     load notes . . . "
-            self.transform_and_load_tb_notes()
-            print "     inspect reblog tree . . . "
-            self.inspect_tb_reblog_tree(blog_name, post_id)
+            try:
+                print "Inspecting "+blog_name+" post id "+str(post_id)
+                print "     extract . . . "
+                self.tb_extract_controller.pull_tumblr_post_by_id(blog_name,post_id)
+                print "     transform . . . "
+                transformed_df = self.transform_tb_posts()
+                print "     load post . . . "
+                self.load_tb_posts(transformed_df)
+                print "     load notes . . . "
+                self.transform_and_load_tb_notes()
+                print "     inspect reblog tree . . . "
+                self.inspect_tb_reblog_tree(blog_name, post_id)
+            except Exception, e:
+                pass
+            
 
     
     def inspect_tb_reblog_tree(self,blog_name, post_id):
