@@ -208,7 +208,6 @@ class etl_controller(object):
         values = "%(" +")s,%(".join(keys) + ")s"
         updates = "id=id"
         
-        
         sql = """
         INSERT INTO wdmpg_submissions (%s) 
         VALUES (%s)
@@ -218,11 +217,17 @@ class etl_controller(object):
         curs = self.mysql_connection.cursor()
         if len(submissions['posts'])>1:
             for submission in submissions['posts']:
-                curs.execute(sql,{k:v for k,v in submission.iteritems() if k in keys})
+                if submission['type'] == 'link':
+                    curs.execute(sql,{k:v for k,v in submission.iteritems() if k in keys})
+                else:
+                    pass
             print "multi"
         elif len(submissions['posts'])==1:
-            curs.execute(sql,{k:v for k,v in submissions['posts'][0].iteritems() if k in keys})
-            print "one"
+            if submissions['posts'][0]['type'] == 'link':
+                curs.execute(sql,{k:v for k,v in submissions['posts'][0].iteritems() if k in keys})
+                print "one"
+            else:
+                pass
         else:
             print "none"
             pass
