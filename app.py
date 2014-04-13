@@ -718,7 +718,7 @@ class etl_controller(object):
         new_reblogs = ['1']
 
         iterations = 0
-        dead_post_sets = []
+        reblogged_from_post_sets = []
 
         while len(new_reblogs) > 0 and iterations < 100: 
             # select all known reblogs that are in the reblogged_from fields of tb_posts
@@ -742,9 +742,12 @@ class etl_controller(object):
             print str(len(new_reblogs)) + " new reblogs in the reblogged_from fields of tb_posts"
             
 
-            dead_posts = set()
+            reblogged_from_posts = set()
 
             for blog_name,post_id in new_reblogs:
+
+                reblogged_from_posts.add(post_id) 
+
                 try:
                     # pull the post data
                     self.tb_extract_controller.pull_tumblr_post_by_id(blog_name,post_id)
@@ -757,17 +760,17 @@ class etl_controller(object):
                         transformed_df = self.transform_tb_posts()
                         self.load_tb_posts(transformed_df)
                     else:
-                        dead_posts.add(post_id) 
+                        pass
                 except Exception, e:
                     print str(e)
                     new_reblogs = []
                     break
 
-            dead_post_sets.append(dead_posts)
+            reblogged_from_post_sets.append(reblogged_from_posts)
 
             if iterations >= 2:
-                if dead_post_sets[-1] == dead_post_sets[-2]:
-                    print "dead post sets are equal, breaking out of loop"
+                if reblogged_from_post_sets[-1] == reblogged_from_post_sets[-2]:
+                    print "Post sets are identical between iterations.  Assuming posts are dead and breaking out of loop . . ."
                     break
 
     def transform_and_load_tb_notes(self):
