@@ -2253,3 +2253,41 @@ class post_generator(object):
         print response
         
         return response
+
+
+
+    def publish_best_submission(self):
+        
+        def __generate_submissions(self):
+            offset = 0
+            batch =  self.tumblr_client.submission('wheredidmypostgo', offset = offset)['posts']
+            yield batch
+            while len(batch) == 10:
+                offset += 10
+                batch =  self.tumblr_client.submission('wheredidmypostgo', offset = offset)['posts']
+                yield batch
+
+        generator = __generate_submissions(self)
+        submissions = []
+        
+        for p in generator:
+            submissions.extend(p)
+        
+        def score(s):
+            v =  s['description'].split('This image is based on ')[1].split('% of the total number of notes')[0].split(' reblogs (')
+            nodes, pct = (int(v[0]),float(v[1]))
+            score = (float(nodes)/8000)**.5 * (pct/40)**.5
+            return score
+            
+            
+        def is_edited(s):
+            return 'description' in s.keys() and '<a href="http://en.wikipedia.org/wiki/Betweenness_centrality">' in s['description']
+            
+        
+        submission_scores = [{'submission_id':s['id'], 'score': score(s)} for s in submissions if is_edited(s)]
+        
+        best_submission = [s for s in submissions if s['id'] == sorted(submission_scores, key=lambda s: s['score'], reverse=True)[0]['submission_id']][0]
+        
+        return self.tumblr_client.edit_post('wheredidmypostgo',
+                                     id = best_submission['id'],
+                                     state = 'published')
