@@ -628,7 +628,7 @@ class etl_controller(object):
 
         def days_since_crawl(reblogs_last_crawled):
             if reblogs_last_crawled != None :
-                return datetime.now()-reblogs_last_crawled).total_seconds()/86400 
+                return (datetime.now()-reblogs_last_crawled).total_seconds()/86400 
             elif (note_count == None):
                 return = 500 #Fake value to bump these up in the queue
             else:
