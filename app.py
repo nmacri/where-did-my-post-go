@@ -466,8 +466,15 @@ class etl_controller(object):
 
         for i,p in transformed_df.iterrows():
             post_dict = dict(p)
+
+
+            for k,v in post_dict.items():
+                if pd.isnull(post_dict[k]):
+                    post_dict[k] = None
+
             columns = ', '.join(post_dict.keys())
             placeholders = "%("+')s,%('.join(post_dict.keys()) + ")s"
+            updates = "note_count = %(note_count)s"
             
             def nan_to_none(v):
                 if pd.isnull(v):
@@ -478,12 +485,14 @@ class etl_controller(object):
             for k,v in post_dict.iteritems():
                 post_dict[k] = nan_to_none(v)
 
-            try:
-                query = 'INSERT INTO tb_posts (%s) VALUES (%s)' % (columns, placeholders)
+            
+                query = """
+                INSERT INTO tb_posts (%s) VALUES (%s)
+                ON DUPLICATE KEY UPDATE %s
+                """ % (columns, placeholders, updates)
+
                 curs.execute(query, post_dict)
-            except Exception,e :
-                query = 'UPDATE tb_posts SET ' + ",".join([k+"=%("+k+")s" for k,v in post_dict.iteritems()]) + " WHERE id =" + str(post_dict['id'])
-                curs.execute(query, post_dict)
+        
         
         self.transform_and_load_tb_posttags()
         
@@ -516,7 +525,7 @@ class etl_controller(object):
             sql = """
             INSERT into tb_blogs (%s) VALUES (%s)
             ON DUPLICATE KEY UPDATE %s
-            """ % (columns, placeholders)
+            """ % (columns, placeholders, updates)
             curs.execute(sql,blog_info)
         except:
             pass
@@ -536,7 +545,7 @@ class etl_controller(object):
 
         sql = """
         INSERT into tb_blogs (%s) VALUES (%s)
-        ON DUPLICATE KEY UPDDATE %s
+        ON DUPLICATE KEY UPDATE %s
         """ % (columns, placeholders,updates)
         curs.execute(sql,blog_info)
 
