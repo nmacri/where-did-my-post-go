@@ -1579,8 +1579,12 @@ class post_generator(object):
                 curs.execute(sql)
                 self.gif_generator.blog_name = curs.fetchall()[0][0]
                 curs.close()
-                self.gif_generator.pick_colors()
-                break
+                try:
+                    self.gif_generator.pick_colors()
+                    break
+                except:
+                    pass
+                
                 
         self.gif_generator.draw_graph_frames()
         self.gif_generator.write_frames_to_gif()
@@ -1734,7 +1738,7 @@ class post_generator(object):
         select id, url
         from wdmpg_submissions
         where response_generated = 0
-        order by date ASC
+        order by RAND()
         """
         curs = self.mysql_connection.cursor()
         curs.execute(sql)
@@ -2257,7 +2261,7 @@ class post_generator(object):
 
 
     def publish_best_submission(self):
-        
+
         def __generate_submissions(self):
             offset = 0
             batch =  self.tumblr_client.submission('wheredidmypostgo', offset = offset)['posts']
