@@ -306,29 +306,6 @@ class etl_controller(object):
                 else:
                     pass
 
-                # Test whether this submission is ready to GIF
-                if s['type'] == 'link':
-                    if '.tumblr.com/' in s['url']:
-                        blog_name = s['url'].split('/')[2].split('.')[0]
-                        post_id = s['url'].split('/')[4]
-                        sql = """
-                        select reblogs_last_crawled from tb_posts
-                        where id = %s
-                        """ 
-                        print sql%(post_id)
-                        curs = self.mysql_connection.cursor()
-                        curs.execute(sql,(post_id,))
-                        reblogs_last_crawled = curs.fetchall()[0][0]
-                        if reblogs_last_crawled == None:
-                            print "not ready"
-                        else:
-                            print "ready to GIF ??? we have been tracking for "+str(round((reblogs_last_crawled - s['date']).total_seconds() / 3600,2))+" hours"
-                        curs.close()
-                    else:
-                        pass
-                else:
-                    pass
-
 
     def tb_posts_etl(self):
         blog_names = self.target_blogs
