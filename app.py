@@ -626,16 +626,30 @@ class etl_controller(object):
         curs = self.mysql_connection.cursor(buffered=True)
         curs.execute(sql)
 
+        def days_since_crawl(reblogs_last_crawled):
+            if reblogs_last_crawled != None :
+                return datetime.now()-reblogs_last_crawled).total_seconds()/86400 
+            elif (note_count == None):
+                return = 500 #Fake value to bump these up in the queue
+            else:
+                return (datetime.now()-date).total_seconds()/86400
+
+        def notes_per_day(note_count,date,notes_per_day):
+            if notes_per_day != None:
+                return notes_per_day
+            elif (note_count == None):
+                return = 500 #Fake value to bump these up in the queue
+            else:
+                return float(note_count) / ((datetime.now()-date).total_seconds()/86400)
+
+
+
+
         posts = [{'id': post_id,
-          'blog_name': blog_name,
-          'days_since_crawl': (datetime.now()-reblogs_last_crawled).total_seconds()/86400 
-                              if reblogs_last_crawled != None 
-                              else (datetime.now()-date).total_seconds()/86400,
-          'notes_per_day': notes_per_day
-                           if notes_per_day != None
-                           else float(note_count) / ((datetime.now()-date).total_seconds()/86400)
-          }
-        for date, blog_name, post_id, reblogs_last_crawled, notes_per_day, note_count in curs]
+                  'blog_name': blog_name,
+                  'days_since_crawl': days_since_crawl(reblogs_last_crawled),
+                  'notes_per_day': notes_per_day(note_count,date,notes_per_day)}
+                for date, blog_name, post_id, reblogs_last_crawled, notes_per_day, note_count in curs]
         curs.close()
 
         from operator import itemgetter
