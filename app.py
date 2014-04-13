@@ -626,15 +626,15 @@ class etl_controller(object):
         curs = self.mysql_connection.cursor(buffered=True)
         curs.execute(sql)
 
-        def days_since_crawl(reblogs_last_crawled):
-            if reblogs_last_crawled != None :
+        def calculate_days_since_crawl(reblogs_last_crawled):
+            if reblogs_last_crawled != None:
                 return (datetime.now()-reblogs_last_crawled).total_seconds()/86400 
             elif (note_count == None):
                 return 500 #Fake value to bump these up in the queue
             else:
                 return (datetime.now()-date).total_seconds()/86400
 
-        def notes_per_day(note_count,date,notes_per_day):
+        def calculate_notes_per_day(note_count,date,notes_per_day):
             if notes_per_day != None:
                 return notes_per_day
             elif (note_count == None):
@@ -642,20 +642,18 @@ class etl_controller(object):
             else:
                 return float(note_count) / ((datetime.now()-date).total_seconds()/86400)
 
-
-
-
         posts = [{'id': post_id,
                   'blog_name': blog_name,
-                  'days_since_crawl': days_since_crawl(reblogs_last_crawled),
-                  'notes_per_day': notes_per_day(note_count,date,notes_per_day)}
+                  'days_since_crawl': calculate_days_since_crawl(reblogs_last_crawled),
+                  'notes_per_day': calculate_notes_per_day(note_count,date,notes_per_day)}
                 for date, blog_name, post_id, reblogs_last_crawled, notes_per_day, note_count in curs]
         curs.close()
+
 
         from operator import itemgetter
 
         for blog_name,post_id,notes_per_day in sorted([(p['blog_name'],p['id'],p['notes_per_day'] * abs(p['days_since_crawl'])) for p in posts],key=itemgetter(2), reverse=True)[0:500]:
-            print "Inspecting "+blog_name+" post id "+post_id
+            print "Inspecting "+blog_name+" post id "+str(post_id)
             print "     extract . . . "
             self.tb_extract_controller.pull_tumblr_post_by_id(blog_name,post_id)
             print "     transform . . . "
