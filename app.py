@@ -1080,12 +1080,14 @@ class etl_controller(object):
         
         for blog_name,row_data in df.iterrows():
             metrics = dict(row_data)
+            m = dict()
             for k,v in metrics.items():
+                m[k] = v
                 if type(v) == pd.np.float64:
-                    metrics[k] = float(v)
+                    m[k] = float(v)
                 if type(v) == pd.np.nan:
-                    metrics[k] = None
-            metric_list.append(metrics)
+                    m[k] = None
+            metric_list.append(m)
 
         curs = self.mysql_connection.cursor()
         for m in metric_list:
