@@ -741,12 +741,13 @@ class etl_controller(object):
         new_reblogs = ['1']
 
         iterations = 0
+        dead_post_sets = []
 
         while len(new_reblogs) > 0 and iterations < 100: 
             # select all known reblogs that are in the reblogged_from fields of tb_posts
             # but not yet in tb_posts
 
-            iterations = iterations + 1
+            iterations += 1
             
             sql = """
             select distinct reblogged_from_name, reblogged_from_id  
@@ -763,6 +764,9 @@ class etl_controller(object):
             
             print str(len(new_reblogs)) + " new reblogs in the reblogged_from fields of tb_posts"
             
+
+            dead_posts = set()
+
             for blog_name,post_id in new_reblogs:
                 try:
                     # pull the post data
@@ -776,10 +780,17 @@ class etl_controller(object):
                         transformed_df = self.transform_tb_posts()
                         self.load_tb_posts(transformed_df)
                     else:
-                        pass
+                        dead_posts.add(post_id) 
                 except Exception, e:
                     print str(e)
                     new_reblogs = []
+                    break
+
+            dead_post_sets.append(dead_posts)
+
+            if iterations >= 2:
+                if dead_post_sets[-1] == dead_post_sets[-2]:
+                    print "dead post sets are equal, breaking out of loop"
                     break
 
     def transform_and_load_tb_notes(self):
