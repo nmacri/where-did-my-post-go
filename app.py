@@ -1320,9 +1320,9 @@ class gif_generator(object):
             r = random.random()
             if r < .7:
                 layout = "dot"
-            elif r < .8:
-                layout="twopi"
             elif r < .9:
+                layout="twopi"
+            elif r < .95:
                 layout="fdp"
             else:
                 layout='circo'
