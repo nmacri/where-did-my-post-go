@@ -1807,14 +1807,19 @@ class post_generator(object):
     def generate_photo_posts(self, count = 5):
         sql = """
         select reblogged_root_url as url
-        from (select reblogged_root_url, count(id) as count
+        from (
+        select reblogged_root_url, 
+        count(id) as count, 
+        POW( ((count(id)/max(note_count)) / 0.5), 0.5) * POW((count(id)/1000),0.5) as graph_score, 
+        POW(1/TIMESTAMPDIFF(DAY,min(date),now()),.5) as recency_score 
         from tb_posts
         where reblogged_root_url is not null
-        ## and gif posted either never or a long time ago
         group by reblogged_root_url
-        order by count(id) DESC
-        limit 300) as top_graphs
+        order by POW(POW(((count(id)/max(note_count)) / 0.5), 0.5) * POW((count(id)/1000),0.5),0.5)*POW(POW(1/TIMESTAMPDIFF(DAY,min(date),now()),.5),0.5) DESC
+        limit 300
+        ) as top_graphs
         where reblogged_root_url not in (select url from wdmpg_submissions)
+        and count > 50
         order by rand() limit %s
         """ % count
         curs = self.mysql_connection.cursor()
