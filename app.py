@@ -241,7 +241,7 @@ class etl_controller(object):
         """
         curs = self.mysql_connection.cursor()
         curs.execute(sql)
-        pending_submissions = [{k:v[i] for i,k in enumerate(curs.column_names)} for v in curs]
+        pending_submissions = [{k:v[i] for i,k in enumerate(curs.column_names)} for v in curs.fetchall()]
         curs.close()
 
         for s in pending_submissions:
@@ -1739,7 +1739,9 @@ class post_generator(object):
         """
         curs = self.mysql_connection.cursor()
         curs.execute(sql)
-        for submission_id,post_url in curs.fetchall():
+        submissions = curs.fetchall()
+        curs.close()
+        for submission_id,post_url in submissions:
             try:
                 self.edit_submission(submission_id,post_url)
             except Exception, e:
