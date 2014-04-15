@@ -2300,4 +2300,18 @@ class post_generator(object):
                   'state':'published'}
         valid_options = ['id', 'type', 'state', 'tags', 'tweet', 'date', 'format', 'slug', 'title', 'url', 'description']
 
-        return self.tumblr_client.send_api_request('post', url, kwargs, valid_options) 
+        response = self.tumblr_client.send_api_request('post', url, kwargs, valid_options) 
+
+
+        sql = """
+        UPDATE wdmpg_submissions 
+        SET response_generated = 1 
+        WHERE id = %s
+        """ % best_submission['id']
+        curs = self.mysql_connection.cursor()
+        curs.execute(sql)
+        curs.close()
+
+        return response
+
+
