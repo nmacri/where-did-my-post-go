@@ -2293,7 +2293,11 @@ class post_generator(object):
         submission_scores = [{'submission_id':s['id'], 'score': score(s)} for s in submissions if is_edited(s)]
         
         best_submission = [s for s in submissions if s['id'] == sorted(submission_scores, key=lambda s: s['score'], reverse=True)[0]['submission_id']][0]
-        
-        return self.tumblr_client.edit_post('wheredidmypostgo',
-                                     id = best_submission['id'],
-                                     state = 'published')
+                
+        blog_name = 'wheredidmypostgo'
+        url = "/v2/blog/%s/post/edit" % blog_name 
+        kwargs = {'id': best_submission['id'],
+                  'state':'published'}
+        valid_options = ['id', 'type', 'state', 'tags', 'tweet', 'date', 'format', 'slug', 'title', 'url', 'description']
+
+        return self.tumblr_client.send_api_request('post', url, kwargs, valid_options) 
