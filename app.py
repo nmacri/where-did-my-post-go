@@ -1318,26 +1318,21 @@ class gif_generator(object):
             layout = "sfdp"
         elif self.G.number_of_nodes() > 400:
             r = random.random()
-            if r < .7:
+            if r < .66:
                 layout = "dot"
-            elif r < .9:
-                layout="twopi"
-            elif r < .95:
-                layout="fdp"
             else:
-                layout='circo'
+                layout="twopi"
         elif self.G.number_of_nodes() > 150:
             r = random.random()
-            if r < .50:
+            if r < .33:
                 layout = "dot"
-            elif r < .75:
+            elif r < .33:
                 layout="twopi"
             else:
                 layout = "fdp"
-
         else:
             r = random.random()
-            if r < .60:
+            if r < .66:
                 layout = "twopi"
             else:
                 layout="fdp"
