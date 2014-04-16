@@ -1479,8 +1479,8 @@ class post_generator(object):
         url = 'http://cl.ly/text/3V32120p461l/A-Thousand-Plateaus.txt'
         text = urllib.urlopen(url).read()
         
-        url = 'http://f.cl.ly/items/3q3r2m0K1G3a2X1A2V1t/anti-oedipus-fixed.txt'
-        text = text + urllib.urlopen(url).read()
+        # url = 'http://f.cl.ly/items/3q3r2m0K1G3a2X1A2V1t/anti-oedipus-fixed.txt'
+        # text = text + urllib.urlopen(url).read()
         
         # Create an instance of the markov chain. By default, it uses MarkovChain.py's location to
         # store and load its database files to. You probably want to give it another location, like so:
