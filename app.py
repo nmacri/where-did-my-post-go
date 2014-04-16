@@ -2314,6 +2314,16 @@ class post_generator(object):
         curs.execute(sql)
         curs.close()
 
+        if '.tumblr.com/post/' in best_submission['url']:
+            sql = """
+            DELETE FROM wdmpg_targets 
+            WHERE TYPE = 'POST'
+            AND value = %s
+            """ % s['url'].split('/')[4]
+            curs = self.mysql_connection.cursor()
+            curs.execute(sql)
+            curs.close()
+
         return response
 
 
