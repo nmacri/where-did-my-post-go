@@ -8,9 +8,11 @@ import copy
 
 from PIL import Image as Im
 import mysql.connector
+#pip install -e git+https://github.com/tumblr/pytumblr.git#egg=pytumblr
 import pytumblr
 import networkx as nx
 import pandas as pd
+#pip install -e git+https://github.com/99designs/colorific#egg=colorific
 import colorific
 from matplotlib import colors
 from dateutil.parser import parse
@@ -201,7 +203,20 @@ class etl_controller(object):
 
     def check_submissions(self):
 
-        submissions = self.tumblr_client.submission(self.blog_name)
+        def __generate_submissions(self):
+            offset = 0
+            batch =  self.tumblr_client.submission('wheredidmypostgo', offset = offset)['posts']
+            yield batch
+            while len(batch) == 10:
+                offset += 10
+                batch =  self.tumblr_client.submission('wheredidmypostgo', offset = offset)['posts']
+                yield batch
+
+        generator = __generate_submissions(self)
+        submissions = []
+        
+        for p in generator:
+            submissions.extend(p)
         
         keys = ['id','date','type','url','title','description','blog_name','liked','followed','post_url','reblog_key']
         columns = ",".join(keys)
@@ -215,16 +230,16 @@ class etl_controller(object):
         """ % (columns,values,updates)
         
         curs = self.mysql_connection.cursor()
-        if len(submissions['posts'])>1:
-            for submission in submissions['posts']:
+        if len(submissions)>1:
+            for submission in submissions:
                 if submission['type'] == 'link':
                     curs.execute(sql,{k:v for k,v in submission.iteritems() if k in keys})
                 else:
                     pass
             print "multi"
-        elif len(submissions['posts'])==1:
-            if submissions['posts'][0]['type'] == 'link':
-                curs.execute(sql,{k:v for k,v in submissions['posts'][0].iteritems() if k in keys})
+        elif len(submissions)==1:
+            if submissions[0]['type'] == 'link':
+                curs.execute(sql,{k:v for k,v in submissions[0].iteritems() if k in keys})
                 print "one"
             else:
                 pass
@@ -278,18 +293,19 @@ class etl_controller(object):
                 ## Test whether this is a valid submission
                 if s['type'] == 'link':
                     if '.tumblr.com/post/' in s['url']:
-                        blog_name = s['url'].split('/')[2].split('.')[0]
-                        post_id = s['url'].split('/')[4]
-                        sql = """
-                        INSERT INTO wdmpg_targets (type,blog_name,value) 
-                        VALUES ('POST', %s, %s)
-                        ON DUPLICATE KEY UPDATE value = value
-                        """ 
-                        print sql%(blog_name,post_id)
-                        curs = self.mysql_connection.cursor()
-                        curs.execute(sql,(blog_name,post_id))
-                        curs.close()
                         try:
+                            blog_name = s['url'].split('/')[2].split('.')[0]
+                            post_id = s['url'].split('/')[4]
+                            sql = """
+                            INSERT INTO wdmpg_targets (type,blog_name,value) 
+                            VALUES ('POST', %s, %s)
+                            ON DUPLICATE KEY UPDATE value = value
+                            """ 
+                            print sql%(blog_name,post_id)
+                            curs = self.mysql_connection.cursor()
+                            curs.execute(sql,(blog_name,post_id))
+                            curs.close()
+                        
                             print "Tumblr post ETL for "+blog_name+" post id "+str(post_id)
                             print "     extract . . . "
                             self.tb_extract_controller.pull_tumblr_post_by_id(blog_name,post_id)

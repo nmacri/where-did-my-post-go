@@ -1,9 +1,22 @@
-PIL==1.1.7
-PyTumblr==0.0.5
-colorific==0.2.1
-matplotlib==1.4.x
+Pillow==2.4.0
+PyMarkovChain==1.7.5
+-e git+https://github.com/tumblr/pytumblr.git@59ae7829bec841738836a62056e53b54d7ae2b93#egg=PyTumblr-master
+backports.ssl-match-hostname==3.4.0.2
+-e git+https://github.com/99designs/colorific@f5975cd1e7736c8ccb08c1cf41c5120b4902f952#egg=colorific-master
+colormath==1.0.9
+gnureadline==6.3.3
+httplib2==0.9
+httpretty==0.8.0
+ipython==2.0.0
+matplotlib==1.3.1
 mysql-connector-python==1.1.6
 networkx==1.8.1
-pandas==0.13.1
-pygraphviz==1.2
+nose==1.3.1
+numpy==1.8.1
+oauth2==1.5.211
+pyparsing==2.0.2
 python-dateutil==2.2
+six==1.6.1
+tornado==3.2
+urllib3==1.8
+wsgiref==0.1.2
