@@ -1336,13 +1336,15 @@ class gif_generator(object):
             r = random.random()
             if r < .66:
                 layout = "dot"
-            else:
+            elif r < .85:
                 layout="twopi"
+            else:
+                layout = "sfdp"
         elif self.G.number_of_nodes() > 150:
             r = random.random()
             if r < .33:
                 layout = "dot"
-            elif r < .33:
+            elif r < .66:
                 layout="twopi"
             else:
                 layout = "fdp"
