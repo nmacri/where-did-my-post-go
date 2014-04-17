@@ -370,7 +370,22 @@ class etl_controller(object):
                 self.transform_and_load_tb_notes()
                 print "   notes loaded."
 
+                blog_name = 'wheredidmypostgo'
+
+                sql = """
+                select id from tb_posts
+                where blog_name = %s
+                order by id DESC
+                limit 40
+                """
+                curs = self.mysql_connection.cursor()
+                curs.execute(sql, (blog_name,))
+                post_ids = [i[0] for i in curs]
                 curs.close()
+
+                for post_id in post_ids
+                    print "     inspecting reblog tree for blog "+blog_name+" post id "+str(post_id)+" . . . "
+                    self.inspect_tb_reblog_tree(blog_name, post['post_id'])
             except Exception, e:
                 pass
             
