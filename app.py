@@ -370,8 +370,6 @@ class etl_controller(object):
                 self.transform_and_load_tb_notes()
                 print "   notes loaded."
 
-                blog_name = 'wheredidmypostgo'
-
                 sql = """
                 select id from tb_posts
                 where blog_name = %s
