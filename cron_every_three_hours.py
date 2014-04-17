@@ -3,7 +3,7 @@ import random
 
 post_generator = app.post_generator()
 
-if random.randint(1,3) == 1:
+if random.random() < .625:
 	try:
 		post_generator.publish_best_submission()
 	except:
