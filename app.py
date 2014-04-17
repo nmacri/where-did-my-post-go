@@ -383,7 +383,7 @@ class etl_controller(object):
                 post_ids = [i[0] for i in curs]
                 curs.close()
 
-                for post_id in post_ids
+                for post_id in post_ids:
                     print "     inspecting reblog tree for blog "+blog_name+" post id "+str(post_id)+" . . . "
                     self.inspect_tb_reblog_tree(blog_name, post['post_id'])
             except Exception, e:
