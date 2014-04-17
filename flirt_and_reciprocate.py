@@ -201,7 +201,7 @@ class flirt_and_reciprocate_bot(object):
                     
                     centrality = nx.closeness_centrality(G) 
 
-                    for hub in sorted(centrality, key=lambda k: centrality[k], reverse=True)[0:5]:
+                    for hub in sorted(centrality, key=lambda k: centrality[k], reverse=True)[0:2]:
                         print "flirting with hub", hub
 
                         # Pull 3 Posts
@@ -249,7 +249,7 @@ if __name__ == '__main__':
     bot = flirt_and_reciprocate_bot()
 
     success_count = 0
-    while success_count < 10:
+    while success_count < 50:
         success = bot.flirt_with_hub()
         if success:
             success_count += 1
