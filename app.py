@@ -1736,7 +1736,7 @@ class post_generator(object):
         
         blogname = 'wheredidmypostgo'
         
-        tags = ['gif','data','network','graph','tumblr','data visualization','trees','animation','animated','color']
+        tags = ['gif','data','network','graph','tumblr','data visualization','trees','animation','animated','color','artists on tumblr']
         pd.np.random.shuffle(tags)
         
         tags = ['wheredidmypostgo'] + tags
@@ -1976,7 +1976,7 @@ class post_generator(object):
                                       <a href='https://github.com/nmacri/where-did-my-post-go'>github</a>, 
                                       <a href='http://www.reddit.com/r/dataisbeautiful/comments/22dkm3/reblog_network_of_an_anonymous_tumblr_post_oc/'>reddit</a>.)</p>
                                       """
-        tags = ['gif','data','network','graph','tumblr','data visualization','animation','animated','color','design','code','art','digital art','generative','datamosh','glitch','abstract','glitch art']
+        tags = ['gif','data','network','graph','graphs','tumblr','data visualization','animation','animated','color','design','code','art','digital art','generative','datamosh','glitch','abstract','glitch art','artists on tumblr']
         pd.np.random.shuffle(tags)
         
         tags = ['wheredidmypostgo'] + tags
@@ -2074,7 +2074,7 @@ class post_generator(object):
         slug = "-".join([s.lower() for s in self.generate_random_title(slug_seed).split(" ")])
         print "slug = "+slug
         
-        tags = ['gif','data','network','graph','tumblr','data visualization','animation','animated','color','design','code','art','digital art','generative','datamosh','glitch','abstract','glitch art']
+        tags = ['gif','data','network','graph','graphs','tumblr','data visualization','animation','animated','color','design','code','art','digital art','generative','datamosh','glitch','abstract','glitch art','artists on tumblr']
         pd.np.random.shuffle(tags)
         
         tags = ['wheredidmypostgo'] + tags
