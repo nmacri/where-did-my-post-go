@@ -1878,7 +1878,6 @@ class post_generator(object):
         limit 300
         ) as top_graphs
         where reblogged_root_url not in (select url from wdmpg_submissions)
-        and count > 50
         order by rand() limit %s
         """ % count
         curs = self.mysql_connection.cursor()
