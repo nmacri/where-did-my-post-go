@@ -1374,7 +1374,7 @@ class gif_generator(object):
             if r < .33:
                 layout = "twopi"
             elif r < .66:
-                layout="fdp"
+                layout="sfdp"
             else:
                 layout="neato"
 
@@ -1390,7 +1390,7 @@ class gif_generator(object):
 
         pos = layout_graph(self.G)
 
-        if random.random() > 0.5 and layout != "sfdp" and layout != "fdp":
+        if random.random() > 0.5 and layout != "sfdp" and layout != "fdp" and layout != "neato":
             new_layout_for_each_frame = True
             print "Using new layout for each frame"
         else:
