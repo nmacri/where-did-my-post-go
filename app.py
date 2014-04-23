@@ -1193,7 +1193,7 @@ class gif_generator(object):
             G.edge[edge[0]][edge[1]]['date'] = edge[2]
         curs.close()
 
-        max_connected_components = random.randint(3,6)
+        max_connected_components = random.randint(1,int(6 + -.0025 * G.number_of_nodes()))
 
         connected=nx.connected_component_subgraphs(G.to_undirected())[0:max_connected_components]
 
