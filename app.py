@@ -1506,7 +1506,7 @@ class gif_generator(object):
         else:
             key = "%x" % random.getrandbits(32)
 
-        frame_order = [len(self.edge_sequence)] + range(len(self.edge_sequence))[1:]
+        frame_order = [len(self.edge_sequence)-1] + range(len(self.edge_sequence)-1)
 
         writeGif('images/animated'+key+'.gif',
                  [Image.open('images/frame'+str(i)+'.png').convert(mode="RGB",palette=Image.ADAPTIVE) for i in frame_order],
