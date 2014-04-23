@@ -1509,7 +1509,7 @@ class gif_generator(object):
         frame_order = [len(self.edge_sequence)] + range(len(self.edge_sequence))[1:]
 
         writeGif('images/animated'+key+'.gif',
-                 [Image.open('images/frame'+str(i)+'.png').convert(mode="RGB",palette=Image.ADAPTIVE) for i in range(len(self.edge_sequence))],
+                 [Image.open('images/frame'+str(i)+'.png').convert(mode="RGB",palette=Image.ADAPTIVE) for i in frame_order],
                  duration=0.15,
                  dither=True)
         self.prev_filename = 'animated'+key+'.gif'
