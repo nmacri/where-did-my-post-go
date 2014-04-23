@@ -1259,9 +1259,12 @@ class gif_generator(object):
         print "Nodes classified."
 
 
-    def pick_colors(self):
-    
-        response = self.tumblr_client.posts(self.blog_name, offset = random.randint(0,150))
+    def pick_colors(self, blog_name = None):
+        if blog_name == None:
+            response = self.tumblr_client.posts(self.blog_name, offset = random.randint(0,150))
+        else:
+            response = self.tumblr_client.posts(blog_name, offset = random.randint(0,150))
+
         thumbnails = [post['photos'][0]['alt_sizes'][-1] for post in response['posts'] if 'photos' in post.keys()]
 
         blog_page = urllib.urlopen(response['blog']['url'])
@@ -1342,35 +1345,50 @@ class gif_generator(object):
 
     def draw_graph_frames(self):
 
+
         # use graphviz to find layout
         if self.G.number_of_nodes() > 2000:
             layout = "sfdp"
         elif self.G.number_of_nodes() > 400:
             r = random.random()
-            if r < .66:
+            if r < .4:
                 layout = "dot"
-            elif r < .85:
+            elif r < .6:
                 layout="twopi"
+            elif r < .8:
+                layout="neato"
             else:
                 layout = "sfdp"
         elif self.G.number_of_nodes() > 150:
             r = random.random()
-            if r < .33:
+            if r < .25:
                 layout = "dot"
-            elif r < .66:
+            elif r < .5:
                 layout="twopi"
+            elif r < .75:
+                layout="neato"
             else:
-                layout = "fdp"
+                layout = "sfdp"
         else:
             r = random.random()
-            if r < .66:
+            if r < .33:
                 layout = "twopi"
-            else:
+            elif r < .66:
                 layout="fdp"
+            else:
+                layout="neato"
 
-        pos=nx.graphviz_layout(self.G,prog=layout)
 
-        print "Using layout ", layout
+        def layout_graph(graph):
+            if layout == 'twopi':
+                pos=nx.graphviz_layout(graph,prog=layout, root=self.blog_name)
+            else:
+                pos=nx.graphviz_layout(graph,prog=layout)
+            return pos
+
+            print "Using layout ", layout
+
+        pos = layout_graph(self.G)
 
         if random.random() > 0.5 and layout != "sfdp" and layout != "fdp":
             new_layout_for_each_frame = True
@@ -1386,7 +1404,7 @@ class gif_generator(object):
             if new_layout_for_each_frame:
                 
                 graph_to_draw = subgraph
-                pos=nx.graphviz_layout(graph_to_draw,prog=layout)
+                pos=layout_graph(graph_to_draw)
 
                 centrality = nx.closeness_centrality(graph_to_draw,normalized=True)
                 centrality_class = pd.Series(centrality)
@@ -1418,7 +1436,11 @@ class gif_generator(object):
             
             import matplotlib.pyplot as plt
 
-            fig = plt.figure(1,figsize= (10,min(max([10,self.G.number_of_nodes() / 30]),15)))
+            if layout == "dot":
+                fig = plt.figure(1,figsize= (10,min(max([10,self.G.number_of_nodes() / 30]),15)))
+            else:
+                fig = plt.figure(1,figsize=(10,10))
+            
 
             axes = fig.add_subplot(111)
 
@@ -1427,7 +1449,7 @@ class gif_generator(object):
 
             # plt.hold(True)
             
-            #gvcolor, wc, ccomps, tred, sccmap, fdp, circo, neato, acyclic, nop, gvpr, dot, sfdp.
+            
             # draw nodes, coloring by rtt ping time
             nx.draw(graph_to_draw,pos=pos,ax=axes,hold=True,
                     edge_color=edge_colors,
@@ -1435,7 +1457,7 @@ class gif_generator(object):
                     cmap=self.node_cmap,
                     edge_cmap=None if new_layout_for_each_frame else self.edge_cmap,
                     with_labels=False,
-                    alpha=.3 if layout == 'sfdp' else 1,
+                    alpha=.8 if layout == 'sfdp' else 1,
                     arrows=False,
                     node_shape='.', #'.' if layout == 'sfdp ' else 'o',
                     node_size= 70000 /graph_to_draw.number_of_nodes(),
@@ -1483,8 +1505,12 @@ class gif_generator(object):
             key = "%x" % random.getrandbits(8)
         else:
             key = "%x" % random.getrandbits(32)
+
+        frame_order = [len(self.edge_sequence)] + range(len(self.edge_sequence))[1:]
+
         writeGif('images/animated'+key+'.gif',
                  [Image.open('images/frame'+str(i)+'.png').convert(mode="RGB",palette=Image.ADAPTIVE) for i in range(len(self.edge_sequence))],
+                 duration=0.15,
                  dither=True)
         self.prev_filename = 'animated'+key+'.gif'
         print "saving as animated"+key+".gif"
@@ -1605,10 +1631,10 @@ class post_generator(object):
                 curs = self.mysql_connection.cursor()
                 sql = "select name from tb_blogs order by rand() limit 1"
                 curs.execute(sql)
-                self.gif_generator.blog_name = curs.fetchall()[0][0]
+                blog_name = curs.fetchall()[0][0]
                 curs.close()
                 try:
-                    self.gif_generator.pick_colors()
+                    self.gif_generator.pick_colors(blog_name=blog_name)
                     break
                 except:
                     pass
@@ -1634,9 +1660,9 @@ class post_generator(object):
                     curs = self.mysql_connection.cursor()
                     sql = "select name from tb_blogs order by rand() limit 1"
                     curs.execute(sql)
-                    self.gif_generator.blog_name = curs.fetchall()[0][0]
+                    blog_name = curs.fetchall()[0][0]
                     curs.close()
-                    self.gif_generator.pick_colors()
+                    self.gif_generator.pick_colors(blog_name=blog_name)
                     break
             self.gif_generator.draw_graph_frames()
             self.gif_generator.write_frames_to_gif()
@@ -1919,9 +1945,9 @@ class post_generator(object):
                 curs = self.mysql_connection.cursor()
                 sql = "select name from tb_blogs order by rand() limit 1"
                 curs.execute(sql)
-                self.gif_generator.blog_name = curs.fetchall()[0][0]
+                blog_name = curs.fetchall()[0][0]
                 curs.close()
-                self.gif_generator.pick_colors()
+                self.gif_generator.pick_colors(blog_name=blog_name)
                 break
                 
         self.gif_generator.draw_graph_frames()
@@ -1944,9 +1970,9 @@ class post_generator(object):
                     curs = self.mysql_connection.cursor()
                     sql = "select name from tb_blogs order by rand() limit 1"
                     curs.execute(sql)
-                    self.gif_generator.blog_name = curs.fetchall()[0][0]
+                    blog_name = curs.fetchall()[0][0]
                     curs.close()
-                    self.gif_generator.pick_colors()
+                    self.gif_generator.pick_colors(blog_name)
                     break
             self.gif_generator.draw_graph_frames()
             self.gif_generator.write_frames_to_gif()
@@ -2015,9 +2041,9 @@ class post_generator(object):
                 curs = self.mysql_connection.cursor()
                 sql = "select name from tb_blogs order by rand() limit 1"
                 curs.execute(sql)
-                self.gif_generator.blog_name = curs.fetchall()[0][0]
+                blog_name = curs.fetchall()[0][0]
                 curs.close()
-                self.gif_generator.pick_colors()
+                self.gif_generator.pick_colors(blog_name=blog_name)
                 break
                 
         self.gif_generator.draw_graph_frames()
@@ -2040,9 +2066,9 @@ class post_generator(object):
                     curs = self.mysql_connection.cursor()
                     sql = "select name from tb_blogs order by rand() limit 1"
                     curs.execute(sql)
-                    self.gif_generator.blog_name = curs.fetchall()[0][0]
+                    blog_name = curs.fetchall()[0][0]
                     curs.close()
-                    self.gif_generator.pick_colors()
+                    self.gif_generator.pick_colors(blog_name=blog_name)
                     break
             self.gif_generator.draw_graph_frames()
             self.gif_generator.write_frames_to_gif()
@@ -2113,9 +2139,9 @@ class post_generator(object):
                 curs = self.mysql_connection.cursor()
                 sql = "select name from tb_blogs order by rand() limit 1"
                 curs.execute(sql)
-                self.gif_generator.blog_name = curs.fetchall()[0][0]
+                blog_name = curs.fetchall()[0][0]
                 curs.close()
-                self.gif_generator.pick_colors()
+                self.gif_generator.pick_colors(blog_name=blog_name)
                 break
                 
         self.gif_generator.draw_graph_frames()
@@ -2138,9 +2164,9 @@ class post_generator(object):
                     curs = self.mysql_connection.cursor()
                     sql = "select name from tb_blogs order by rand() limit 1"
                     curs.execute(sql)
-                    self.gif_generator.blog_name = curs.fetchall()[0][0]
+                    blog_name = curs.fetchall()[0][0]
                     curs.close()
-                    self.gif_generator.pick_colors()
+                    self.gif_generator.pick_colors(blog_name=blog_name)
                     break
             self.gif_generator.draw_graph_frames()
             self.gif_generator.write_frames_to_gif()
@@ -2209,17 +2235,17 @@ class post_generator(object):
                 curs = self.mysql_connection.cursor()
                 sql = "select name from tb_blogs order by rand() limit 1"
                 curs.execute(sql)
-                self.gif_generator.blog_name = curs.fetchall()[0][0]
+                blog_name = curs.fetchall()[0][0]
                 curs.close()
-                self.gif_generator.pick_colors()
+                self.gif_generator.pick_colors(blog_name=blog_name)
                 break
             except:
                 curs = self.mysql_connection.cursor()
                 sql = "select name from tb_blogs order by rand() limit 1"
                 curs.execute(sql)
-                self.gif_generator.blog_name = curs.fetchall()[0][0]
+                blog_name = curs.fetchall()[0][0]
                 curs.close()
-                self.gif_generator.pick_colors()
+                self.gif_generator.pick_colors(blog_name=blog_name)
                 break
                 
         self.gif_generator.draw_graph_frames()
@@ -2239,17 +2265,17 @@ class post_generator(object):
                     curs = self.mysql_connection.cursor()
                     sql = "select name from tb_blogs order by rand() limit 1"
                     curs.execute(sql)
-                    self.gif_generator.blog_name = curs.fetchall()[0][0]
+                    blog_name = curs.fetchall()[0][0]
                     curs.close()
-                    self.gif_generator.pick_colors()
+                    self.gif_generator.pick_colors(blog_name=blog_name)
                     break
                 except:
                     curs = self.mysql_connection.cursor()
                     sql = "select name from tb_blogs order by rand() limit 1"
                     curs.execute(sql)
-                    self.gif_generator.blog_name = curs.fetchall()[0][0]
+                    blog_name = curs.fetchall()[0][0]
                     curs.close()
-                    self.gif_generator.pick_colors()
+                    self.gif_generator.pick_colors(blog_name=blog_name)
                     break
             self.gif_generator.draw_graph_frames()
             self.gif_generator.write_frames_to_gif()

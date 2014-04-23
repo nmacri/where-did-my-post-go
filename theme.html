@@ -17,6 +17,12 @@ For any help message me on my theme blog
 <head>
  
 <title>{Title}</title>
+
+
+<meta name="description" content="Where Did my Post Go? is a Tumblr bot/blog/service that posts GIFs generated from the reblog networks of posts that you submit"/>
+
+
+
 <meta name="color:Text" content="#000000"/>
 <meta name="color:Link" content="#000000"/>
 <meta name="color:Link Hover" content="#ededed"/>
@@ -457,7 +463,113 @@ function() { $('#content').masonry({ appendedContent: $(this) }); }
  
 {/block:ifnotInfiniteScroll}
  
- 
+<meta name="google-site-verification" content="9jnv_NDanQxr6KN9UT1IpPPj2LsRPAkLJAgZ81a8-cg" />
+<meta name="keywords" content="Tumblr,reblog,network,tree,graph,data,visualization,gif,bot" />
+
+
+
+<meta property="og:site_name" content="{Title}"/>
+<meta content="{Title}" name="og:title" /> 
+
+
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:creator" content="@nmacri"/>
+<meta name="og:author" content="http://facebook.com/nmacri"/>
+
+<meta content="{PortraitURL-64}" name="twitter:image" />
+<meta name="twitter:domain" content="tumblr.com" />
+
+<meta name="twitter:site" content="tumblr" /><meta name="twitter:app:name:iphone" content="Tumblr" /><meta name="twitter:app:name:ipad" content="Tumblr" /><meta name="twitter:app:name:googleplay" content="Tumblr" /><meta name="twitter:app:id:iphone" content="305343404" /><meta name="twitter:app:id:ipad" content="305343404" /><meta name="twitter:app:id:googleplay" content="com.tumblr" />
+<meta name="twitter:app:url:iphone" content="tumblr://x-callback-url/blog?blogName=wheredidmypostgo&amp;referrer=twitter-cards">
+<meta name="twitter:app:url:ipad" content="tumblr://x-callback-url/blog?blogName=wheredidmypostgo&amp;referrer=twitter-cards">
+<meta name="twitter:app:url:googleplay" content="tumblr://x-callback-url/blog?blogName=wheredidmypostgo&amp;referrer=twitter-cards">
+
+
+
+
+ {block:PermalinkPage}
+
+ <meta property="og:url" content="{Permalink}"/>
+ <meta property="og:type" content="article"/>
+ <meta content="{Permalink}" name="twitter:url" />
+ {/block:PermalinkPage}
+
+
+ <meta content="{Title}" name="twitter:title" /> 
+{block:PostSummary}
+  <meta content="{PostSummary}" name="twitter:title" />
+{/block:PostSummary}
+
+ {block:Posts}
+ {block:Text}
+ {block:Title}<meta property="og:title" content="{PlaintextTitle}"/>{/block:Title}
+ <meta property="og:description" content="{PlaintextBody}"/>
+ {/block:Text}
+
+ {block:Photo}
+ <meta property="og:image" content="{PhotoURL-500}"/>
+ <meta content="{PhotoURL-500}" name="twitter:image" />
+ {block:Caption}<meta property="og:description" content="{PlaintextCaption}"/>{/block:Caption}
+ {/block:Photo}
+
+ {block:Photoset}
+ {block:Photos}
+ <meta property="og:image" content="{PhotoURL-500}"/>
+ {/block:Photos}
+ {block:Caption}<meta property="og:description" content="{PlaintextCaption}"/>{/block:Caption}
+ {/block:Photoset}
+
+ {block:Quote}
+ <meta property="og:title" content="{PlaintextQuote}"/>
+ <meta property="og:description" content="{PlaintextSource}"/>
+ <meta property="og:image" content="{PortraitURL-64}"/>
+ {/block:Quote}
+
+ {block:Link}
+ <meta property="og:title" content="{PlaintextName}"/>
+ <meta property="og:description" content="{PlaintextDescription}"/>
+ <meta property="og:image" content="{PortraitURL-64}"/>
+ {/block:Link}
+
+ {block:Chat}
+ <meta property="og:title" content="{PlaintextTitle}"/>
+ <meta property="og:description" content="{block:Lines}{block:Label}{Label}: {/block:Label}{Line} &bull; {/block:Lines}"/>
+ <meta property="og:image" content="{PortraitURL-64}"/>
+ {/block:Chat}
+
+ {block:Audio}
+ <meta property="og:title" content="{block:Artist}{Artist} - {/block:Artist}{block:TrackName}{TrackName}{/block:TrackName}"/>
+ <meta property="og:description" content="{PlaintextCaption}"/>
+ {block:AlbumArt}<meta property="og:image" content="{AlbumArtURL}"/>{/block:AlbumArt}
+ {/block:Audio}
+
+ {block:Video}
+ {block:Caption}<meta property="og:description" content="{PlaintextCaption}"/>{/block:Caption}
+ {/block:Video}
+
+ {block:Answer}
+ <meta property="og:title" content="{PlaintextQuestion}"/>
+ <meta property="og:description" content="{PlaintextAnswer}"/>
+ <meta property="og:image" content="{PortraitURL-64}"/>
+ {/block:Answer}
+
+ {/block:Posts}
+
+ {/block:PermalinkPage}
+
+ {block:IndexPage}
+ <meta property="og:title" content="{Title}"/>
+ <meta property="og:type" content="blog"/>
+ <meta property="og:description" content="{MetaDescription}"/>
+ <meta property="og:image" content="{PortraitURL-64}"/>
+ {/block:IndexPage}
+
+{block:Description}
+<meta content="{MetaDescription}" name="twitter:description" />
+{/block:Description}
+
+<meta content="17786104" name="twitter:site:id" />
+
  
 </head></head>
 <body>
@@ -693,6 +805,8 @@ at {12Hour}:{Minutes}{AmPm} {block:Date} {block:NoteCount}with {NoteCountWithLab
   })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
 
   ga('create', 'UA-49659608-1', 'tumblr.com');
+  ga('require', 'displayfeatures');
+  ga('require', 'linkid', 'linkid.js');
   ga('send', 'pageview');
   
   $('.btn').click(function(e){
