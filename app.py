@@ -1619,7 +1619,7 @@ class post_generator(object):
         Supply user-submitted links with a GIF and a caption
         """
         blog_name = post_url.split('/')[2].split('.')[0]
-        post_id = post_url.split('/')[4]
+        post_id = post_url.split('/post/')[1].split('/')[0]
 
         # Retrieve Submission from API
         response = self.tumblr_client.posts('wheredidmypostgo', id = submission_id)
