@@ -294,6 +294,7 @@ class flirt_and_reciprocate_bot(object):
                     return score
 
             for blog in sorted(blogs,key=blog_score)[0:int(len(blogs)/5)]:
+                print "unfollowing "+b['url']
                 self.etl_controller.tumblr_client.unfollow(b['url'])
 
 
