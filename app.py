@@ -1713,10 +1713,12 @@ class post_generator(object):
         opener = urllib2.build_opener(urllib2.HTTPRedirectHandler)
         request = opener.open(post_url)
         post_url = request.url
+
+        post_id = post_url.split('/post/')[1].split('/')[0]
         
         sql = "select id, blog_name, short_url, note_count from tb_posts where post_url = %s"
         curs = self.mysql_connection.cursor()
-        curs.execute(sql,(post_url,))
+        curs.execute(sql,(post_id,))
         post_id, blog_name, short_url, note_count = curs.fetchall()[0]
         curs.close()
         
