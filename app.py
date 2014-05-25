@@ -1910,6 +1910,7 @@ class post_generator(object):
         POW(1/TIMESTAMPDIFF(DAY,min(date),now()),.5) as recency_score 
         from tb_posts
         where reblogged_root_url is not null
+            and date > DATE_SUB(NOW(), INTERVAL 14 day)
         group by reblogged_root_url
         order by POW(POW(((count(id)/max(note_count)) / 0.5), 0.5) * POW((count(id)/1000),0.5),0.5)*POW(POW(1/TIMESTAMPDIFF(DAY,min(date),now()),.5),0.5) DESC
         limit 300
