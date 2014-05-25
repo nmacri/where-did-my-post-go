@@ -41,21 +41,9 @@ class flirt_and_reciprocate_bot(object):
         self.influencer_df = psql.read_frame(sql,self.etl_controller.mysql_connection)
         self.influencer_df['pdf'] = self.influencer_df.ClosenessCentrality / self.influencer_df.ClosenessCentrality.sum()
         self.influencer_df['cdf'] = self.influencer_df.sort(column='pdf',ascending=False).pdf.cumsum()
-        
-        sql = """
-        select tag
-        from tb_posts
-        inner join tb_posttag_level on tb_posttag_level.`post_id` = tb_posts.id
-        where tb_posts.blog_name = 'wheredidmypostgo'
-        """
-        curs = self.etl_controller.mysql_connection.cursor()
-        curs.execute(sql)
-        all_tags = curs.fetchall()
             
-        self.most_common_tags = [t[0] for t in Counter(all_tags).most_common(n=200)]
-        
-        curs.close()
-        
+        self.most_common_tags = ['gif','data','network','graph','tumblr','data visualization','trees','animation','animated','color','artists on tumblr']
+                
         response = self.tb_client.posts('wheredidmypostgo', notes_info='true')
         self.posts = response['posts']
         for offset in range(20,response['total_posts'],20):
