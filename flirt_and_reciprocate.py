@@ -243,10 +243,65 @@ class flirt_and_reciprocate_bot(object):
                     else:
                         pass
 
+    def unfollow_disengaged_blogs(self):
+
+        response = self.etl_controller.tumblr_client.following(offset=0)
+
+        if response['total_blogs'] > 4000:
+
+            sql = """
+            select distinct blog_name
+            from tb_posts
+            where reblogged_root_name = 'wheredidmypostgo'
+            """
+
+            curs = self.etl_controller.mysql_connection.cursor()
+            curs.execute(sql)
+            engaged_blogs = [r[0] for r in curs]
+            curs.close()
+
+            blogs = [{'name': b['name'],
+              'url': b['url'],
+              'engaged': b['name'] in engaged_blogs,
+              'active_days_ago':(datetime.now()-datetime.fromtimestamp(b['updated'])).days} for b in response['blogs']]
+
+            errors = 0
+
+            initial_offset = pd.np.random.randint(20,response['total_blogs']-1200)
+
+            for offset in range(initial_offset,response['total_blogs'],20):
+                response = self.etl_controller.tumblr_client.following(offset=offset)
+                try:
+                    more_blogs = [{'name': b['name'],
+                                  'url': b['url'],
+                                  'engaged': b['name'] in engaged_blogs,
+                                  'active_days_ago':(datetime.now()-datetime.fromtimestamp(b['updated'])).days} for b in response['blogs']]
+                except Exception, e:
+                    if response['meta']['status'] == 429:
+                        break
+                    elif len(users) < total_users and errors < 3:
+                        errors += 1
+                        continue
+                    else:
+                        break
+                blogs.extend(more_blogs)
+
+            def blog_score(blog):
+                score = 1 / float(blog['active_days_ago'] + 1)
+                if blog['engaged']:
+                    return 1
+                else: 
+                    return score
+
+            for blog in sorted(blogs,key=blog_score)[0:int(len(blogs)/5)]:
+                self.etl_controller.tumblr_client.unfollow(b['url'])
+
 
 if __name__ == '__main__':
 
     bot = flirt_and_reciprocate_bot()
+
+    bot.unfollow_disengaged_blogs()
 
     success_count = 0
     while success_count < 50:

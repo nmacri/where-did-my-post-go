@@ -508,6 +508,7 @@ function() { $('#content').masonry({ appendedContent: $(this) }); }
 
  {block:Photo}
  <meta property="og:image" content="{PhotoURL-500}"/>
+ <meta name="twitter:card" content="summary_large_image"/>
  <meta content="{PhotoURL-500}" name="twitter:image" />
  {block:Caption}<meta property="og:description" content="{PlaintextCaption}"/>{/block:Caption}
  {/block:Photo}
