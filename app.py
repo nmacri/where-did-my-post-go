@@ -1545,34 +1545,37 @@ class post_generator(object):
         # To generate the markov chain's language model, in case it's not present
         self.mc.generateDatabase(text)
 
-        # attempt to keep database size < 2.5GB
-        sql = """
-        SELECT sum( data_length )/ 1024 / 1024 FROM information_schema.TABLES WHERE table_schema = 'wdmpg' 
-        """
-        curs = self.mysql_connection.cursor()
-        curs.execute(sql)
-        size_mb = curs.fetchall()[0][0]
-        curs.close()
-
-        if size_mb > 2500:
+        try:
+            # attempt to keep database size < 2.5GB
             sql = """
-            delete from tb_posts
-            where note_count < 50 and reblogged_root_url is NULL and notes_last_inspected is Null and `reblogs_last_crawled` is Null
-            limit 50000
+            SELECT sum( data_length )/ 1024 / 1024 FROM information_schema.TABLES WHERE table_schema = 'wdmpg' 
             """
             curs = self.mysql_connection.cursor()
             curs.execute(sql)
+            size_mb = curs.fetchall()[0][0]
             curs.close()
 
-            sql = """
-            delete from tb_notes
-            where type = 'LIKE'
-            limit 100000
-            """
-            curs = self.mysql_connection.cursor()
-            curs.execute(sql)
-            curs.close()
-        else:
+            if size_mb > 2500:
+                sql = """
+                delete from tb_posts
+                where note_count < 50 and reblogged_root_url is NULL and notes_last_inspected is Null and `reblogs_last_crawled` is Null
+                limit 50000
+                """
+                curs = self.mysql_connection.cursor()
+                curs.execute(sql)
+                curs.close()
+
+                sql = """
+                delete from tb_notes
+                where type = 'LIKE'
+                limit 100000
+                """
+                curs = self.mysql_connection.cursor()
+                curs.execute(sql)
+                curs.close()
+            else:
+                pass
+        except Exception, e:
             pass
    
         
