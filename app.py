@@ -1148,16 +1148,17 @@ class gif_generator(object):
         request = opener.open(post_url)
         post_url = request.url
 
+        post_id = post_url.split('/post/')[1].split('/')[0]
+
         G = nx.DiGraph()
 
         sql = """
         select blog_name, date, id
         from tb_posts
-        where post_url = %s
-        order by date ASC
+        where id = %s
         """
         curs = self.mysql_connection.cursor()
-        curs.execute(sql,(post_url,))
+        curs.execute(sql,(post_id,))
         for node in curs:
             G.add_node(node[0])
             self.blog_name = node[0]
