@@ -38,7 +38,7 @@ class tumblr_extract_controller(object):
         # Build an Authorized Tumblr Client
         self.tumblr_client = pytumblr.TumblrRestClient(**secrets['tumblr_tokens'])
         
-        self.user_name = self.tumblr_client.info()['user']['name']
+        self.user_name = "wheredidmypostgo"
 
     def pull_tagged_tumblr_posts(self,tag_name,number_of_posts):
         '''
@@ -1959,14 +1959,17 @@ class post_generator(object):
                 return "reblog network"
     
     def generate_anonymous_photo_post(self, reblogged_root_url):
+
+        reblogged_root_id = reblogged_root_url.split('/post/')[1].split('/')[0]
+
         sql = """
         select id, blog_name, note_count
         from tb_posts
-        where post_url = %s
+        where id = %s
         limit 1
         """ 
         curs = self.mysql_connection.cursor()
-        curs.execute(sql,(reblogged_root_url,))
+        curs.execute(sql,(reblogged_root_id,))
         post_id, blog_name, note_count = curs.fetchall()[0]
         curs.close()
         
@@ -2055,14 +2058,16 @@ class post_generator(object):
         return response
     
     def generate_named_photo_post(self, reblogged_root_url):
+        reblogged_root_id = reblogged_root_url.split('/post/')[1].split('/')[0]
+
         sql = """
         select id, blog_name, note_count
         from tb_posts
-        where post_url = %s
+        where id = %s
         limit 1
         """ 
         curs = self.mysql_connection.cursor()
-        curs.execute(sql,(reblogged_root_url,))
+        curs.execute(sql,(reblogged_root_id,))
         post_id, blog_name, note_count = curs.fetchall()[0]
         curs.close()
         
@@ -2153,15 +2158,17 @@ class post_generator(object):
         return response
     
     def generate_featured_photo_post(self, reblogged_root_url):
+        reblogged_root_id = reblogged_root_url.split('/post/')[1].split('/')[0]
+
         sql = """
-        select id, blog_name, note_count, featured_in_tag
+        select id, blog_name, note_count
         from tb_posts
-        where post_url = %s
+        where id = %s
         limit 1
         """ 
         curs = self.mysql_connection.cursor()
-        curs.execute(sql,(reblogged_root_url,))
-        post_id, blog_name, note_count, featured_in_tag = curs.fetchall()[0]
+        curs.execute(sql,(reblogged_root_id,))
+        post_id, blog_name, note_count = curs.fetchall()[0]
         curs.close()
         
         ######
