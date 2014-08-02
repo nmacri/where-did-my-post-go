@@ -892,7 +892,11 @@ class etl_controller(object):
                     INSERT into tb_notes (%s) VALUES (%s)
                     ON DUPLICATE KEY UPDATE timestamp=timestamp
                     """  % (columns, placeholders)
-                    curs.execute(sql,like)
+                    try:
+                        curs.execute(sql,like)
+                    except:
+                        pass
+                    
 
         
         if len(reblogs)>0:
