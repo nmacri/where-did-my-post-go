@@ -201,6 +201,16 @@ class etl_controller(object):
 
         curs.close()
 
+    def remove_stub_posts():
+        sql = """
+        delete from tb_posts
+        where reblogged_root_url is null
+        and notes_last_inspected is null
+        """
+        curs = self.mysql_connection.cursor()
+        curs.execute(sql)
+        curs.close()
+
     def check_submissions(self):
 
         def __generate_submissions(self):
@@ -727,6 +737,11 @@ class etl_controller(object):
         
         # put the freshest data in the database
         self.tb_extract_controller.pull_tumblr_post_by_id(blog_name,post_id)
+        print "     transform . . . "
+        transformed_df = self.transform_tb_posts()
+        print "     load post . . . "
+        self.load_tb_posts(transformed_df)
+        print "     load notes . . . "
         self.transform_and_load_tb_notes()
         
         # fetch the root url
@@ -1917,7 +1932,7 @@ class post_generator(object):
             and date > DATE_SUB(NOW(), INTERVAL 14 day)
         group by reblogged_root_url
         order by POW(POW(((count(id)/max(note_count)) / 0.5), 0.5) * POW((count(id)/1000),0.5),0.5)*POW(POW(1/TIMESTAMPDIFF(DAY,min(date),now()),.5),0.5) DESC
-        limit 300
+        limit 80
         ) as top_graphs
         where reblogged_root_url not in (select url from wdmpg_submissions)
         order by rand() limit %s
