@@ -5,7 +5,7 @@ backports.ssl-match-hostname==3.4.0.2
 -e git+https://github.com/99designs/colorific@f5975cd1e7736c8ccb08c1cf41c5120b4902f952#egg=colorific-master
 colormath==1.0.9
 gnureadline==6.3.3
-httplib2==0.9
+httplib2==0.19.0
 httpretty==0.8.0
 ipython==2.0.0
 matplotlib==1.3.1
