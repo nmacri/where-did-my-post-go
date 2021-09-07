@@ -1,4 +1,4 @@
-Pillow==2.4.0
+Pillow==8.3.2
 PyMarkovChain==1.7.5
 -e git+https://github.com/tumblr/pytumblr.git@59ae7829bec841738836a62056e53b54d7ae2b93#egg=PyTumblr-master
 backports.ssl-match-hostname==3.4.0.2
